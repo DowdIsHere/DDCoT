@@ -263,8 +263,12 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
       ]);
 
     } catch (err) {
-      setError(err.message || 'Failed to transform content');
       console.error('API Error:', err);
+      if (err.message === 'Failed to fetch') {
+        setError('Failed to fetch: This is likely a CORS issue. Make sure your API key has "browser access" enabled at console.anthropic.com/settings/keys');
+      } else {
+        setError(err.message || 'Failed to transform content');
+      }
     } finally {
       setIsLoading(false);
     }
