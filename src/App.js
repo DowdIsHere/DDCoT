@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { supabase } from './supabaseClient';
 
 // The 27 CBI Profiles - Robert's actual mappings
 const PROFILES = {
@@ -108,12 +109,73 @@ function CognitiveModifier() {
   const [inputText, setInputText] = useState('');
   const [modifiedText, setModifiedText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
   const [changes, setChanges] = useState([]);
   const [error, setError] = useState('');
   const [lastUsage, setLastUsage] = useState(null);
   const [sessionUsage, setSessionUsage] = useState({ inputTokens: 0, outputTokens: 0, calls: 0 });
+
+  // Auth + credits
+  const [session, setSession] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [balance, setBalance] = useState(null);
+  const [overageLimit, setOverageLimit] = useState(-5);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup'
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMessage, setAuthMessage] = useState('');
+
+  const fetchBalance = useCallback(async (accessToken) => {
+    if (!accessToken) return;
+    try {
+      const res = await fetch('/api/credits', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBalance(data.balance);
+        setOverageLimit(data.overage_limit ?? -5);
+      }
+    } catch (e) {
+      // network blip — leave existing balance, don't surface
+    }
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setAuthChecked(true);
+      if (s?.access_token) fetchBalance(s.access_token);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s?.access_token) fetchBalance(s.access_token);
+      else setBalance(null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [fetchBalance]);
+
+  const handleSignIn = async (e) => {
+    e?.preventDefault();
+    setAuthBusy(true);
+    setAuthMessage('');
+    const { error: authErr } = authMode === 'signup'
+      ? await supabase.auth.signUp({ email: authEmail, password: authPassword })
+      : await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+    setAuthBusy(false);
+    if (authErr) {
+      setAuthMessage(authErr.message);
+    } else if (authMode === 'signup') {
+      setAuthMessage('Check your email to confirm your account, then sign in.');
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setBalance(null);
+  };
 
   // Find matching profile
   const matchedProfile = useMemo(() => {
@@ -246,15 +308,15 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputText, spatial, temporal, reference]);
 
-  // Call Claude API
+  // Call Claude API via our server (server holds the Anthropic key)
   const transformWithAPI = async () => {
     if (!inputText.trim()) {
       setError('Please enter content to transform');
       return;
     }
-    
-    if (!apiKey.trim()) {
-      setError('Please enter your Anthropic API key');
+
+    if (!session?.access_token) {
+      setError('Please sign in to transform content');
       return;
     }
 
@@ -275,23 +337,31 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey
+          Authorization: `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 8192,
-          messages: [
-            { role: 'user', content: prompt }
-          ]
+          messages: [{ role: 'user', content: prompt }],
+          profile_name: matchedProfile?.name || null
         })
       });
 
+      const data = await response.json();
+
+      if (response.status === 402) {
+        setError('Out of credits — buy more to keep transforming.');
+        if (typeof data.balance === 'number') setBalance(data.balance);
+        return;
+      }
+      if (response.status === 401) {
+        setError('Your session expired — please sign in again.');
+        return;
+      }
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `API error: ${response.status}`);
+        throw new Error(data.error?.message || data.error || `API error: ${response.status}`);
       }
 
-      const data = await response.json();
       const transformedContent = data.content[0].text;
       const usage = data.usage || {};
       const inputTokens = usage.input_tokens || 0;
@@ -312,13 +382,10 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
         `Reference: ${getPositionLabel(reference, 'reference')} (${reference})`
       ]);
 
+      if (typeof data.balance === 'number') setBalance(data.balance);
     } catch (err) {
       console.error('API Error:', err);
-      if (err.message === 'Failed to fetch') {
-        setError('Failed to fetch: This is likely a CORS issue. Make sure your API key has "browser access" enabled at console.anthropic.com/settings/keys');
-      } else {
-        setError(err.message || 'Failed to transform content');
-      }
+      setError(err.message || 'Failed to transform content');
     } finally {
       setIsLoading(false);
     }
@@ -370,42 +437,138 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
           <div style={{ backgroundColor: '#252540', borderRadius: '12px', padding: '20px' }}>
             <h2 style={{ fontSize: '18px', marginBottom: '20px' }}>Target Profile</h2>
             
-            {/* API Key Input */}
+            {/* Account / Auth Panel */}
             <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#1a1a2e', borderRadius: '8px' }}>
-              <label style={{ fontSize: '12px', color: '#888', display: 'block', marginBottom: '8px' }}>
-                Anthropic API Key
-              </label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-ant-..."
-                  style={{
-                    flex: 1,
-                    padding: '8px',
-                    backgroundColor: '#333',
-                    border: '1px solid #444',
-                    borderRadius: '4px',
-                    color: 'white',
-                    fontSize: '12px'
-                  }}
-                />
-                <button
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  style={{
-                    padding: '8px',
-                    backgroundColor: '#444',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontSize: '12px'
-                  }}
-                >
-                  {showApiKey ? 'Hide' : 'Show'}
-                </button>
-              </div>
+              {!authChecked ? (
+                <div style={{ fontSize: '12px', color: '#888' }}>Loading…</div>
+              ) : session ? (
+                <>
+                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>Signed in as</div>
+                  <div style={{ fontSize: '13px', marginBottom: '10px', wordBreak: 'break-all' }}>
+                    {session.user?.email}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', color: '#888' }}>Credits</span>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      color: balance == null ? '#888'
+                        : balance > 0 ? '#66bb6a'
+                        : balance > overageLimit ? '#fbbf24'
+                        : '#ff6666'
+                    }}>
+                      {balance == null ? '—' : balance}
+                    </span>
+                  </div>
+                  {balance != null && balance <= 0 && balance > overageLimit && (
+                    <div style={{ fontSize: '11px', color: '#fbbf24', marginBottom: '8px' }}>
+                      In overage ({Math.abs(balance)} of {Math.abs(overageLimit)})
+                    </div>
+                  )}
+                  {balance != null && balance <= overageLimit && (
+                    <div style={{ fontSize: '11px', color: '#ff6666', marginBottom: '8px' }}>
+                      Out of credits — buy more to continue
+                    </div>
+                  )}
+                  <button
+                    onClick={handleSignOut}
+                    style={{
+                      width: '100%',
+                      padding: '6px',
+                      fontSize: '11px',
+                      backgroundColor: '#333',
+                      border: '1px solid #444',
+                      borderRadius: '4px',
+                      color: '#ccc',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <form onSubmit={handleSignIn}>
+                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
+                    {authMode === 'signup' ? 'Create account' : 'Sign in'}
+                  </div>
+                  <input
+                    type="email"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="email"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      marginBottom: '8px',
+                      backgroundColor: '#333',
+                      border: '1px solid #444',
+                      borderRadius: '4px',
+                      color: 'white',
+                      fontSize: '12px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <input
+                    type="password"
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    placeholder="password"
+                    required
+                    minLength={6}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      marginBottom: '8px',
+                      backgroundColor: '#333',
+                      border: '1px solid #444',
+                      borderRadius: '4px',
+                      color: 'white',
+                      fontSize: '12px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={authBusy}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      backgroundColor: authBusy ? '#444' : '#3b82f6',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: 'white',
+                      cursor: authBusy ? 'wait' : 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      marginBottom: '6px'
+                    }}
+                  >
+                    {authBusy ? '…' : (authMode === 'signup' ? 'Sign up' : 'Sign in')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAuthMode(authMode === 'signup' ? 'signin' : 'signup'); setAuthMessage(''); }}
+                    style={{
+                      width: '100%',
+                      padding: '4px',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: '#888',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    {authMode === 'signup' ? 'Have an account? Sign in' : 'New here? Create account'}
+                  </button>
+                  {authMessage && (
+                    <div style={{ fontSize: '11px', color: '#fbbf24', marginTop: '6px' }}>
+                      {authMessage}
+                    </div>
+                  )}
+                </form>
+              )}
             </div>
             
             <SliderControl 
@@ -522,7 +685,7 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
             {/* Transform Button */}
             <button
               onClick={transformWithAPI}
-              disabled={isLoading || !inputText.trim() || !apiKey.trim()}
+              disabled={isLoading || !inputText.trim() || !session || (balance != null && balance <= overageLimit)}
               style={{
                 width: '100%',
                 marginTop: '20px',
