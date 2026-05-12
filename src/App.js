@@ -124,6 +124,9 @@ function CognitiveModifier() {
   const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup'
   const [authBusy, setAuthBusy] = useState(false);
   const [authMessage, setAuthMessage] = useState('');
+  const [packs, setPacks] = useState(null);
+  const [checkoutBusy, setCheckoutBusy] = useState(null);
+  const [checkoutMessage, setCheckoutMessage] = useState('');
 
   const fetchBalance = useCallback(async (accessToken) => {
     if (!accessToken) return;
@@ -154,8 +157,55 @@ function CognitiveModifier() {
       else setBalance(null);
     });
 
+    // Fetch pack catalog (public endpoint)
+    fetch('/api/packs')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data && setPacks(data))
+      .catch(() => {});
+
+    // Handle return from Stripe checkout
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get('checkout');
+    if (checkoutStatus === 'success') {
+      setCheckoutMessage('Payment received — credits will appear momentarily.');
+      // Refresh balance a few times; webhook may take a second to land
+      const refresh = (delay) => setTimeout(async () => {
+        const { data: { session: s } } = await supabase.auth.getSession();
+        if (s?.access_token) fetchBalance(s.access_token);
+      }, delay);
+      refresh(500); refresh(2000); refresh(5000);
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (checkoutStatus === 'cancel') {
+      setCheckoutMessage('Checkout canceled — no charge.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     return () => subscription.unsubscribe();
   }, [fetchBalance]);
+
+  const handleBuyPack = async (packKey) => {
+    if (!session?.access_token) return;
+    setCheckoutBusy(packKey);
+    setCheckoutMessage('');
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ pack: packKey })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || 'Checkout failed');
+      }
+      window.location.href = data.url;
+    } catch (err) {
+      setCheckoutMessage(err.message || 'Checkout failed');
+      setCheckoutBusy(null);
+    }
+  };
 
   const handleSignIn = async (e) => {
     e?.preventDefault();
@@ -470,6 +520,63 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
                       Out of credits — buy more to continue
                     </div>
                   )}
+
+                  {/* Credit packs */}
+                  {packs && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <div style={{ fontSize: '11px', color: '#888', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Buy credits
+                      </div>
+                      {['starter', 'standard', 'pro'].map((key) => {
+                        const p = packs[key];
+                        if (!p) return null;
+                        const isPopular = p.popular;
+                        const isBusy = checkoutBusy === key;
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => handleBuyPack(key)}
+                            disabled={!!checkoutBusy}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              marginBottom: '6px',
+                              backgroundColor: isPopular ? '#3b82f6' : '#333',
+                              border: isPopular ? '1px solid #3b82f6' : '1px solid #444',
+                              borderRadius: '6px',
+                              color: 'white',
+                              cursor: checkoutBusy ? 'wait' : 'pointer',
+                              fontSize: '12px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                              <span style={{ fontWeight: 'bold' }}>
+                                {p.label}
+                                {isPopular && (
+                                  <span style={{ marginLeft: '6px', fontSize: '9px', color: '#fbbf24' }}>★ Most Popular</span>
+                                )}
+                              </span>
+                              <span style={{ fontSize: '10px', color: isPopular ? '#dbeafe' : '#999' }}>
+                                {p.credits} credits
+                              </span>
+                            </span>
+                            <span style={{ fontWeight: 'bold' }}>
+                              {isBusy ? '…' : p.price}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      {checkoutMessage && (
+                        <div style={{ fontSize: '11px', color: '#fbbf24', marginTop: '4px' }}>
+                          {checkoutMessage}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <button
                     onClick={handleSignOut}
                     style={{
