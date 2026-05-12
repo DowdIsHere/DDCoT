@@ -1,21 +1,52 @@
 const express = require('express');
 const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Parse JSON bodies
-app.use(express.json({ limit: '10mb' }));
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
-// Serve static files from React build
+if (!ANTHROPIC_API_KEY) {
+  console.warn('[boot] ANTHROPIC_API_KEY is not set — /api/anthropic will fail until configured.');
+}
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn('[boot] SUPABASE_URL / SUPABASE_ANON_KEY not set — auth verification will fail.');
+}
+
+const supabaseAuth = SUPABASE_URL && SUPABASE_ANON_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'build')));
 
-// Proxy endpoint for Anthropic API
-app.post('/api/anthropic', async (req, res) => {
-  const apiKey = req.headers['x-api-key'];
+async function requireAuth(req, res, next) {
+  if (!supabaseAuth) {
+    return res.status(500).json({ error: 'Auth not configured on server' });
+  }
 
-  if (!apiKey) {
-    return res.status(400).json({ error: 'API key required' });
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ error: 'Sign in required' });
+  }
+
+  const { data, error } = await supabaseAuth.auth.getUser(token);
+  if (error || !data?.user) {
+    return res.status(401).json({ error: 'Invalid or expired session' });
+  }
+
+  req.user = data.user;
+  next();
+}
+
+app.post('/api/anthropic', requireAuth, async (req, res) => {
+  if (!ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'Anthropic API key not configured on server' });
   }
 
   try {
@@ -23,7 +54,7 @@ app.post('/api/anthropic', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify(req.body)
@@ -42,7 +73,6 @@ app.post('/api/anthropic', async (req, res) => {
   }
 });
 
-// Handle React routing - serve index.html for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });

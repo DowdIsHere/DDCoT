@@ -82,6 +82,25 @@ const GRADIENT_LABELS = {
   reference: { low: "Other", mid: "Balanced", high: "Self" }
 };
 
+// Claude Sonnet 4 pricing (USD per million tokens)
+const PRICING = {
+  inputPerMTok: 3,
+  outputPerMTok: 15,
+};
+
+// Rough token estimate: ~4 chars/token for English prose.
+const estimateTokens = (text) => Math.ceil((text || '').length / 4);
+
+const formatCost = (usd) => {
+  if (usd < 0.01) return `<$0.01`;
+  if (usd < 1) return `$${usd.toFixed(3)}`;
+  return `$${usd.toFixed(2)}`;
+};
+
+const costFor = (inputTokens, outputTokens) =>
+  (inputTokens / 1_000_000) * PRICING.inputPerMTok +
+  (outputTokens / 1_000_000) * PRICING.outputPerMTok;
+
 function CognitiveModifier() {
   const [spatial, setSpatial] = useState(50);
   const [temporal, setTemporal] = useState(50);
@@ -93,6 +112,8 @@ function CognitiveModifier() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [changes, setChanges] = useState([]);
   const [error, setError] = useState('');
+  const [lastUsage, setLastUsage] = useState(null);
+  const [sessionUsage, setSessionUsage] = useState({ inputTokens: 0, outputTokens: 0, calls: 0 });
 
   // Find matching profile
   const matchedProfile = useMemo(() => {
@@ -204,6 +225,27 @@ Transform this content completely for the target cognitive profile. Maintain all
 Output ONLY the transformed content, no explanations or meta-commentary.`;
   };
 
+  // Estimated cost for the next transform (live, before API call)
+  const estimatedCost = useMemo(() => {
+    if (!inputText.trim()) return null;
+    const prompt = buildTransformationPrompt(
+      inputText,
+      'PREVIEW',
+      spatial,
+      temporal,
+      reference
+    );
+    const inputTokens = estimateTokens(prompt);
+    // Output tokens roughly track input content length; transforms reframe, not summarize.
+    const outputTokens = Math.min(estimateTokens(inputText), 8192);
+    return {
+      inputTokens,
+      outputTokens,
+      usd: costFor(inputTokens, outputTokens),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputText, spatial, temporal, reference]);
+
   // Call Claude API
   const transformWithAPI = async () => {
     if (!inputText.trim()) {
@@ -251,8 +293,18 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
 
       const data = await response.json();
       const transformedContent = data.content[0].text;
-      
+      const usage = data.usage || {};
+      const inputTokens = usage.input_tokens || 0;
+      const outputTokens = usage.output_tokens || 0;
+      const usd = costFor(inputTokens, outputTokens);
+
       setModifiedText(transformedContent);
+      setLastUsage({ inputTokens, outputTokens, usd });
+      setSessionUsage((prev) => ({
+        inputTokens: prev.inputTokens + inputTokens,
+        outputTokens: prev.outputTokens + outputTokens,
+        calls: prev.calls + 1,
+      }));
       setChanges([
         `Transformed for ${matchedProfile?.name || 'target'} profile`,
         `Spatial: ${getPositionLabel(spatial, 'spatial')} (${spatial})`,
@@ -425,6 +477,48 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
               </div>
             </div>
             
+            {/* Cost Estimate */}
+            <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#1a1a2e', borderRadius: '8px', fontSize: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '6px' }}>
+                <span>Estimated cost (this run)</span>
+                <span style={{ color: estimatedCost ? '#fbbf24' : '#555', fontWeight: 'bold' }}>
+                  {estimatedCost ? formatCost(estimatedCost.usd) : '—'}
+                </span>
+              </div>
+              {estimatedCost && (
+                <div style={{ color: '#666', fontSize: '11px' }}>
+                  ~{estimatedCost.inputTokens.toLocaleString()} in / ~{estimatedCost.outputTokens.toLocaleString()} out tokens
+                </div>
+              )}
+              {lastUsage && (
+                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #333' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888' }}>
+                    <span>Last actual</span>
+                    <span style={{ color: '#66bb6a', fontWeight: 'bold' }}>{formatCost(lastUsage.usd)}</span>
+                  </div>
+                  <div style={{ color: '#666', fontSize: '11px' }}>
+                    {lastUsage.inputTokens.toLocaleString()} in / {lastUsage.outputTokens.toLocaleString()} out tokens
+                  </div>
+                </div>
+              )}
+              {sessionUsage.calls > 0 && (
+                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #333' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888' }}>
+                    <span>Session ({sessionUsage.calls} {sessionUsage.calls === 1 ? 'call' : 'calls'})</span>
+                    <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>
+                      {formatCost(costFor(sessionUsage.inputTokens, sessionUsage.outputTokens))}
+                    </span>
+                  </div>
+                  <div style={{ color: '#666', fontSize: '11px' }}>
+                    {sessionUsage.inputTokens.toLocaleString()} in / {sessionUsage.outputTokens.toLocaleString()} out tokens
+                  </div>
+                </div>
+              )}
+              <div style={{ marginTop: '8px', color: '#555', fontSize: '10px' }}>
+                Sonnet 4: ${PRICING.inputPerMTok}/M in · ${PRICING.outputPerMTok}/M out
+              </div>
+            </div>
+
             {/* Transform Button */}
             <button
               onClick={transformWithAPI}
