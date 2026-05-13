@@ -119,6 +119,7 @@ function CognitiveModifier() {
   const [authChecked, setAuthChecked] = useState(false);
   const [balance, setBalance] = useState(null);
   const [overageLimit, setOverageLimit] = useState(-5);
+  const [freeMode, setFreeMode] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup'
@@ -136,8 +137,14 @@ function CognitiveModifier() {
       });
       if (res.ok) {
         const data = await res.json();
-        setBalance(data.balance);
-        setOverageLimit(data.overage_limit ?? -5);
+        if (data.free_mode) {
+          setFreeMode(true);
+          setBalance(null);
+        } else {
+          setFreeMode(false);
+          setBalance(data.balance);
+          setOverageLimit(data.overage_limit ?? -5);
+        }
       }
     } catch (e) {
       // network blip — leave existing balance, don't surface
@@ -157,10 +164,14 @@ function CognitiveModifier() {
       else setBalance(null);
     });
 
-    // Fetch pack catalog (public endpoint)
+    // Fetch pack catalog (public endpoint). Ignore in free mode.
     fetch('/api/packs')
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => data && setPacks(data))
+      .then((data) => {
+        if (!data) return;
+        if (data.free_mode) setPacks(null);
+        else setPacks(data);
+      })
       .catch(() => {});
 
     // Handle return from Stripe checkout
@@ -497,32 +508,52 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
                   <div style={{ fontSize: '13px', marginBottom: '10px', wordBreak: 'break-all' }}>
                     {session.user?.email}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '12px', color: '#888' }}>Credits</span>
-                    <span style={{
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      color: balance == null ? '#888'
-                        : balance > 0 ? '#66bb6a'
-                        : balance > overageLimit ? '#fbbf24'
-                        : '#ff6666'
+                  {freeMode ? (
+                    <div style={{
+                      marginBottom: '10px',
+                      padding: '8px 10px',
+                      backgroundColor: '#1e3a5c',
+                      border: '1px solid #3b82f6',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: '#dbeafe',
+                      textAlign: 'center'
                     }}>
-                      {balance == null ? '—' : balance}
-                    </span>
-                  </div>
-                  {balance != null && balance <= 0 && balance > overageLimit && (
-                    <div style={{ fontSize: '11px', color: '#fbbf24', marginBottom: '8px' }}>
-                      In overage ({Math.abs(balance)} of {Math.abs(overageLimit)})
+                      <strong style={{ color: '#fbbf24' }}>Free access</strong>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
+                        Private testing — unlimited transforms
+                      </div>
                     </div>
-                  )}
-                  {balance != null && balance <= overageLimit && (
-                    <div style={{ fontSize: '11px', color: '#ff6666', marginBottom: '8px' }}>
-                      Out of credits — buy more to continue
-                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '12px', color: '#888' }}>Credits</span>
+                        <span style={{
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          color: balance == null ? '#888'
+                            : balance > 0 ? '#66bb6a'
+                            : balance > overageLimit ? '#fbbf24'
+                            : '#ff6666'
+                        }}>
+                          {balance == null ? '—' : balance}
+                        </span>
+                      </div>
+                      {balance != null && balance <= 0 && balance > overageLimit && (
+                        <div style={{ fontSize: '11px', color: '#fbbf24', marginBottom: '8px' }}>
+                          In overage ({Math.abs(balance)} of {Math.abs(overageLimit)})
+                        </div>
+                      )}
+                      {balance != null && balance <= overageLimit && (
+                        <div style={{ fontSize: '11px', color: '#ff6666', marginBottom: '8px' }}>
+                          Out of credits — buy more to continue
+                        </div>
+                      )}
+                    </>
                   )}
 
-                  {/* Credit packs */}
-                  {packs && (
+                  {/* Credit packs (hidden in free mode) */}
+                  {!freeMode && packs && (
                     <div style={{ marginBottom: '10px' }}>
                       <div style={{ fontSize: '11px', color: '#888', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         Buy credits
@@ -792,7 +823,7 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
             {/* Transform Button */}
             <button
               onClick={transformWithAPI}
-              disabled={isLoading || !inputText.trim() || !session || (balance != null && balance <= overageLimit)}
+              disabled={isLoading || !inputText.trim() || !session || (!freeMode && balance != null && balance <= overageLimit)}
               style={{
                 width: '100%',
                 marginTop: '20px',
