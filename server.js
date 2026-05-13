@@ -13,6 +13,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 const APP_URL = process.env.APP_URL || 'http://localhost:3000';
+const FREE_MODE = process.env.FREE_MODE === 'true';
 
 if (!ANTHROPIC_API_KEY) {
   console.warn('[boot] ANTHROPIC_API_KEY is not set — /api/anthropic will fail until configured.');
@@ -28,6 +29,9 @@ if (!STRIPE_SECRET_KEY) {
 }
 if (!STRIPE_WEBHOOK_SECRET) {
   console.warn('[boot] STRIPE_WEBHOOK_SECRET not set — webhook signature verification will fail.');
+}
+if (FREE_MODE) {
+  console.log('[boot] FREE_MODE enabled — credit checks bypassed, no charges, no buy-credits UI.');
 }
 
 const supabaseAuth = SUPABASE_URL && SUPABASE_ANON_KEY
@@ -130,6 +134,9 @@ async function requireAuth(req, res, next) {
 
 // GET /api/credits — return the signed-in user's current balance
 app.get('/api/credits', requireAuth, async (req, res) => {
+  if (FREE_MODE) {
+    return res.json({ free_mode: true, balance: null, overage_limit: null });
+  }
   if (!supabaseAdmin) {
     return res.status(500).json({ error: 'Server not configured' });
   }
@@ -148,6 +155,9 @@ app.get('/api/credits', requireAuth, async (req, res) => {
 
 // GET /api/packs — return the public pack catalog for the UI
 app.get('/api/packs', (req, res) => {
+  if (FREE_MODE) {
+    return res.json({ free_mode: true });
+  }
   res.json({
     starter:  { credits: PACKS.starter.credits,  price: '$9.99',  label: 'Starter'  },
     standard: { credits: PACKS.standard.credits, price: '$29.99', label: 'Standard', popular: true },
@@ -200,25 +210,29 @@ app.post('/api/anthropic', requireAuth, async (req, res) => {
   if (!ANTHROPIC_API_KEY) {
     return res.status(500).json({ error: 'Anthropic API key not configured on server' });
   }
-  if (!supabaseAdmin) {
+  if (!FREE_MODE && !supabaseAdmin) {
     return res.status(500).json({ error: 'Server not configured' });
   }
 
-  // Atomically check + decrement credit. If user has hit the overage floor, reject.
-  const { data: creditData, error: creditError } = await supabaseAdmin
-    .rpc('use_credit', { p_user_id: req.user.id });
+  // Credit gate: skip entirely in FREE_MODE.
+  let newBalance = null;
+  if (!FREE_MODE) {
+    const { data: creditData, error: creditError } = await supabaseAdmin
+      .rpc('use_credit', { p_user_id: req.user.id });
 
-  if (creditError) {
-    console.error('use_credit error:', creditError);
-    return res.status(500).json({ error: 'Credit check failed' });
-  }
+    if (creditError) {
+      console.error('use_credit error:', creditError);
+      return res.status(500).json({ error: 'Credit check failed' });
+    }
 
-  const row = Array.isArray(creditData) ? creditData[0] : creditData;
-  if (!row?.ok) {
-    return res.status(402).json({
-      error: 'Out of credits — please purchase more to continue',
-      balance: row?.new_balance ?? 0
-    });
+    const row = Array.isArray(creditData) ? creditData[0] : creditData;
+    if (!row?.ok) {
+      return res.status(402).json({
+        error: 'Out of credits — please purchase more to continue',
+        balance: row?.new_balance ?? 0
+      });
+    }
+    newBalance = row.new_balance;
   }
 
   let anthropicResponse;
@@ -234,31 +248,38 @@ app.post('/api/anthropic', requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('Anthropic fetch error:', error);
-    await supabaseAdmin.rpc('refund_credit', { p_user_id: req.user.id });
+    if (!FREE_MODE) {
+      await supabaseAdmin.rpc('refund_credit', { p_user_id: req.user.id });
+    }
     return res.status(502).json({ error: 'Failed to reach Anthropic API' });
   }
 
   const data = await anthropicResponse.json();
 
   if (!anthropicResponse.ok) {
-    await supabaseAdmin.rpc('refund_credit', { p_user_id: req.user.id });
+    if (!FREE_MODE) {
+      await supabaseAdmin.rpc('refund_credit', { p_user_id: req.user.id });
+    }
     return res.status(anthropicResponse.status).json(data);
   }
 
-  const usage = data.usage || {};
-  const inputTokens = usage.input_tokens || 0;
-  const outputTokens = usage.output_tokens || 0;
-  const cost = costFor(inputTokens, outputTokens);
+  // Always log the transform for cost/abuse monitoring, even in FREE_MODE.
+  if (supabaseAdmin) {
+    const usage = data.usage || {};
+    const inputTokens = usage.input_tokens || 0;
+    const outputTokens = usage.output_tokens || 0;
+    const cost = costFor(inputTokens, outputTokens);
 
-  await supabaseAdmin.from('transforms').insert({
-    user_id: req.user.id,
-    input_tokens: inputTokens,
-    output_tokens: outputTokens,
-    cost_usd: cost,
-    profile_name: req.body?.profile_name || null
-  });
+    await supabaseAdmin.from('transforms').insert({
+      user_id: req.user.id,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      cost_usd: cost,
+      profile_name: req.body?.profile_name || null
+    });
+  }
 
-  res.json({ ...data, balance: row.new_balance });
+  res.json({ ...data, balance: newBalance });
 });
 
 app.get('*', (req, res) => {
