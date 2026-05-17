@@ -5,4 +5,10 @@
 // Profile files are added incrementally during the rewrite work; this map
 // grows one entry per profile as each file lands.
 
-export const establishedProfiles = {};
+import { sharpEstablishedProfile } from './sharp.js';
+
+export const establishedProfiles = {
+  SHARP: sharpEstablishedProfile,
+};
+
+export { sharpEstablishedProfile };
