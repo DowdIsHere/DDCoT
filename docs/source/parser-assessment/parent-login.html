@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kids Assessment Access | Parser Profile™</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue-900: #0C2340;
+            --blue-700: #1B3A5C;
+            --blue-500: #2563EB;
+            --blue-400: #3B82F6;
+            --blue-100: #DBEAFE;
+            --blue-50:  #EFF6FF;
+            --slate-900: #1A1A2E;
+            --slate-700: #334155;
+            --slate-500: #64748B;
+            --slate-300: #CBD5E1;
+            --slate-100: #F1F5F9;
+            --white: #FFFFFF;
+            --green-600: #059669;
+            --red-600: #DC2626;
+            --bg-page: #F7F8FA;
+            --bg-card: #FFFFFF;
+            --bg-inset: #F1F5F9;
+            --text-primary: #1A1A2E;
+            --text-secondary: #334155;
+            --text-muted: #64748B;
+            --border: rgba(0,0,0,0.08);
+            --border-strong: rgba(0,0,0,0.14);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'IBM Plex Sans', system-ui, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 24px;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+        .logo { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.1rem; font-weight: 700; color: var(--slate-900); }
+        .logo span { color: var(--blue-500); }
+        .tagline { font-family: 'IBM Plex Mono', monospace; color: var(--slate-500); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.15em; }
+        .back-link { color: var(--slate-500); text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; }
+        .back-link:hover { color: var(--blue-500); }
+
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: var(--shadow-md);
+            width: 100%;
+            max-width: 440px;
+        }
+        .card-header { text-align: center; margin-bottom: 32px; }
+        .card-icon { font-size: 2.5rem; margin-bottom: 12px; }
+        .card-title {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 1.6rem; font-weight: 700; color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .card-subtitle { color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; }
+
+        /* Tabs */
+        .tabs { display: flex; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 28px; overflow: hidden; }
+        .tab-btn {
+            flex: 1; padding: 10px; border: none; background: transparent;
+            font-family: 'IBM Plex Sans', sans-serif; font-size: 0.9rem; font-weight: 500;
+            color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+        }
+        .tab-btn.active { background: var(--blue-500); color: white; }
+
+        /* Role selector */
+        .role-label { font-size: 0.85rem; font-weight: 500; color: var(--slate-700); margin-bottom: 10px; display: block; }
+        .role-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .role-option input { display: none; }
+        .role-card {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            padding: 14px 10px; border: 2px solid var(--border);
+            border-radius: 10px; cursor: pointer; transition: all 0.2s;
+            text-align: center;
+        }
+        .role-card:hover { border-color: var(--blue-400); }
+        .role-option input:checked + .role-card { border-color: var(--blue-500); background: var(--blue-50); }
+        .role-icon { font-size: 1.5rem; }
+        .role-name { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+        .role-desc { font-size: 0.72rem; color: var(--text-muted); }
+
+        /* Form fields */
+        .field { margin-bottom: 18px; }
+        .field label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--slate-700); margin-bottom: 6px; }
+        .field input {
+            width: 100%; padding: 12px 16px;
+            border: 1px solid var(--border); border-radius: 10px;
+            font-family: 'IBM Plex Sans', sans-serif; font-size: 0.95rem;
+            color: var(--text-primary); background: var(--bg-card);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .field input:focus { outline: none; border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .field input::placeholder { color: var(--text-muted); }
+
+        .btn-primary {
+            width: 100%; padding: 13px; border: none; border-radius: 10px;
+            background: var(--blue-500); color: white;
+            font-family: 'IBM Plex Sans', sans-serif; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; margin-top: 4px;
+        }
+        .btn-primary:hover { background: var(--blue-400); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .alert {
+            padding: 12px 16px; border-radius: 8px;
+            font-size: 0.875rem; line-height: 1.5; margin-bottom: 18px;
+            display: none;
+        }
+        .alert.error { background: #FEF2F2; border: 1px solid #FECACA; color: var(--red-600); }
+        .alert.success { background: #F0FDF4; border: 1px solid #BBF7D0; color: var(--green-600); }
+        .alert.show { display: block; }
+
+        .divider { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin: 8px 0 0; }
+
+        .notice {
+            margin-top: 24px; padding: 14px; border-radius: 10px;
+            background: var(--blue-50); border: 1px solid var(--blue-100);
+            font-size: 0.8rem; color: var(--slate-700); line-height: 1.5;
+        }
+        .notice strong { color: var(--blue-500); }
+
+        .welcome-state { display: none; text-align: center; }
+        .welcome-name { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.3rem; color: var(--text-primary); margin-bottom: 8px; }
+        .welcome-role { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 24px; }
+        .btn-goto {
+            display: inline-block; padding: 13px 32px;
+            background: var(--blue-500); color: white; text-decoration: none;
+            border-radius: 10px; font-weight: 600; font-size: 0.95rem;
+            transition: all 0.2s; margin-bottom: 12px;
+        }
+        .btn-goto:hover { background: var(--blue-400); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+        .btn-logout {
+            display: inline-block; margin-top: 12px;
+            background: none; border: none; color: var(--text-muted);
+            font-family: 'IBM Plex Sans', sans-serif; font-size: 0.85rem;
+            cursor: pointer; text-decoration: underline;
+        }
+        .btn-logout:hover { color: var(--red-600); }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <div class="logo">Parser <span>Profile</span>™</div>
+            <div class="tagline">Developed by J.D. Mercer</div>
+        </div>
+        <a href="/assessment.html" class="back-link">← Adult Assessment</a>
+    </header>
+
+    <main>
+        <div class="card">
+            <!-- Welcome state (already logged in) -->
+            <div class="welcome-state" id="welcomeState">
+                <div class="card-icon">✓</div>
+                <div class="welcome-name" id="welcomeName"></div>
+                <div class="welcome-role" id="welcomeRole"></div>
+                <a href="/kids-assessment.html" class="btn-goto">Go to Kids Assessment →</a>
+                <br>
+                <button class="btn-logout" id="logoutBtn">Sign out</button>
+            </div>
+
+            <!-- Auth forms -->
+            <div id="authForms">
+                <div class="card-header">
+                    <div class="card-icon">🧒</div>
+                    <div class="card-title">Kids Assessment</div>
+                    <div class="card-subtitle">Sign in or create an account to access the children's Parser Profile™ assessment.</div>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" id="tabSignIn" onclick="switchTab('signin')">Sign In</button>
+                    <button class="tab-btn" id="tabRegister" onclick="switchTab('register')">Create Account</button>
+                </div>
+
+                <div id="alertBox" class="alert"></div>
+
+                <!-- Sign In Form -->
+                <form id="signinForm" onsubmit="handleSignIn(event)">
+                    <div class="field">
+                        <label for="signinEmail">Email</label>
+                        <input type="email" id="signinEmail" placeholder="your@email.com" required autocomplete="email">
+                    </div>
+                    <div class="field">
+                        <label for="signinPassword">Password</label>
+                        <input type="password" id="signinPassword" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn-primary" id="signinBtn">Sign In</button>
+                    <div class="divider" style="margin-top: 16px;">Don't have an account? <a href="#" onclick="switchTab('register'); return false;" style="color: var(--blue-500);">Create one</a></div>
+                </form>
+
+                <!-- Register Form -->
+                <form id="registerForm" style="display:none;" onsubmit="handleRegister(event)">
+                    <span class="role-label">I am a...</span>
+                    <div class="role-options">
+                        <label class="role-option">
+                            <input type="radio" name="role" value="parent" checked>
+                            <div class="role-card">
+                                <div class="role-icon">👨‍👩‍👧</div>
+                                <div class="role-name">Parent</div>
+                                <div class="role-desc">Assessing my child</div>
+                            </div>
+                        </label>
+                        <label class="role-option">
+                            <input type="radio" name="role" value="teacher">
+                            <div class="role-card">
+                                <div class="role-icon">🎓</div>
+                                <div class="role-name">Teacher</div>
+                                <div class="role-desc">Assessing students</div>
+                            </div>
+                        </label>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="field" style="margin-bottom:0;">
+                            <label for="regFirstName">First Name</label>
+                            <input type="text" id="regFirstName" placeholder="First" required autocomplete="given-name">
+                        </div>
+                        <div class="field" style="margin-bottom:0;">
+                            <label for="regLastName">Last Name</label>
+                            <input type="text" id="regLastName" placeholder="Last" required autocomplete="family-name">
+                        </div>
+                    </div>
+                    <div style="margin-bottom:18px;"></div>
+                    <div class="field">
+                        <label for="regEmail">Email</label>
+                        <input type="email" id="regEmail" placeholder="your@email.com" required autocomplete="email">
+                    </div>
+                    <div class="field">
+                        <label for="regPassword">Password <span style="color:var(--text-muted);font-weight:400;">(min. 8 characters)</span></label>
+                        <input type="password" id="regPassword" placeholder="••••••••" required minlength="8" autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="btn-primary" id="registerBtn">Create Account</button>
+                    <div class="divider" style="margin-top: 16px;">Already have an account? <a href="#" onclick="switchTab('signin'); return false;" style="color: var(--blue-500);">Sign in</a></div>
+                </form>
+
+                <div class="notice">
+                    <strong>Why sign in?</strong> The kids assessment is designed for use by parents and teachers who can guide children through the questions and interpret the results appropriately.
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Check if already authenticated on load
+        (async () => {
+            try {
+                const res = await fetch('/api/auth/status');
+                const data = await res.json();
+                if (data.authenticated) showWelcome(data.user);
+            } catch {}
+
+            // Show banner if redirected from kids assessment
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('reason') === 'expired') {
+                showAlert('Your session expired. Please sign in again.', 'error');
+            } else if (params.get('reason') === 'auth') {
+                showAlert('Please sign in to access the Kids Assessment.', 'error');
+            }
+        })();
+
+        function switchTab(tab) {
+            const isSignin = tab === 'signin';
+            document.getElementById('tabSignIn').classList.toggle('active', isSignin);
+            document.getElementById('tabRegister').classList.toggle('active', !isSignin);
+            document.getElementById('signinForm').style.display = isSignin ? '' : 'none';
+            document.getElementById('registerForm').style.display = isSignin ? 'none' : '';
+            hideAlert();
+        }
+
+        function showAlert(msg, type) {
+            const box = document.getElementById('alertBox');
+            box.textContent = msg;
+            box.className = `alert ${type} show`;
+        }
+
+        function hideAlert() {
+            document.getElementById('alertBox').className = 'alert';
+        }
+
+        function showWelcome(user) {
+            document.getElementById('authForms').style.display = 'none';
+            const ws = document.getElementById('welcomeState');
+            ws.style.display = 'block';
+            document.getElementById('welcomeName').textContent = `Welcome back, ${user.firstName}!`;
+            const roleLabel = user.role === 'teacher' ? 'Teacher account' : 'Parent account';
+            document.getElementById('welcomeRole').textContent = roleLabel;
+        }
+
+        async function handleSignIn(e) {
+            e.preventDefault();
+            const btn = document.getElementById('signinBtn');
+            btn.disabled = true;
+            btn.textContent = 'Signing in…';
+            hideAlert();
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('signinEmail').value,
+                        password: document.getElementById('signinPassword').value
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = '/kids-assessment.html';
+                } else {
+                    showAlert(data.error || 'Sign in failed. Please try again.', 'error');
+                }
+            } catch {
+                showAlert('Network error. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Sign In';
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const btn = document.getElementById('registerBtn');
+            btn.disabled = true;
+            btn.textContent = 'Creating account…';
+            hideAlert();
+
+            const role = document.querySelector('input[name="role"]:checked').value;
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        firstName: document.getElementById('regFirstName').value.trim(),
+                        lastName: document.getElementById('regLastName').value.trim(),
+                        email: document.getElementById('regEmail').value,
+                        password: document.getElementById('regPassword').value,
+                        role
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = '/kids-assessment.html';
+                } else {
+                    showAlert(data.error || 'Registration failed. Please try again.', 'error');
+                }
+            } catch {
+                showAlert('Network error. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.reload();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parser Profile for Kids | How Do You Think?</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue-500: #2563EB;
+            --blue-400: #3B82F6;
+            --blue-100: #DBEAFE;
+            --slate-900: #1A1A2E;
+            --slate-700: #334155;
+            --slate-500: #64748B;
+            --slate-100: #F1F5F9;
+            --white: #FFFFFF;
+            --bg-page: #F7F8FA;
+            --bg-card: #FFFFFF;
+            --text-primary: #1A1A2E;
+            --text-secondary: #334155;
+            --text-muted: #64748B;
+            --border: rgba(0, 0, 0, 0.08);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --accent-spatial: #0D9488;
+            --accent-temporal: #D97706;
+            --accent-reference: #7C3AED;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'IBM Plex Sans', system-ui, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            font-size: 18px;
+        }
+        .container { max-width: 700px; margin: 0 auto; padding: 20px; }
+        header {
+            text-align: center;
+            padding: 20px 0 30px;
+        }
+        .logo { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.5rem; font-weight: 700; color: var(--slate-900); }
+        .logo span { color: var(--blue-500); }
+        .tagline { color: var(--slate-500); font-size: 1rem; margin-top: 5px; }
+        .progress-container { margin: 20px 0; }
+        .progress-bar { height: 12px; background: var(--slate-100); border-radius: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-spatial), var(--accent-temporal), var(--accent-reference)); transition: width 0.4s ease; width: 0%; }
+        .progress-text { text-align: center; margin-top: 10px; font-size: 1rem; color: var(--text-muted); }
+        .screen { display: none; animation: fadeIn 0.4s ease; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: var(--shadow-sm);
+        }
+        .card h1 { font-family: 'Source Serif 4', Georgia, serif; font-size: 2rem; font-weight: 700; margin-bottom: 15px; text-align: center; }
+        .card h2 { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.5rem; font-weight: 600; margin-bottom: 25px; line-height: 1.4; }
+        .card p { color: var(--text-secondary); margin-bottom: 20px; font-size: 1.1rem; text-align: center; }
+        .question-number { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .options { display: flex; flex-direction: column; gap: 12px; }
+        .option {
+            display: flex; align-items: center; gap: 15px;
+            padding: 18px 20px;
+            background: var(--slate-100);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1.05rem;
+        }
+        .option:hover { background: var(--blue-100); border-color: var(--blue-400); }
+        .option.selected { background: var(--blue-100); border-color: var(--blue-500); }
+        .option-letter {
+            width: 36px; height: 36px;
+            background: var(--white);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 600; color: var(--blue-500);
+            flex-shrink: 0;
+        }
+        .option.selected .option-letter { background: var(--blue-500); color: white; }
+        .btn-primary {
+            background: var(--blue-500);
+            color: white; border: none;
+            padding: 16px 40px; font-size: 1.1rem; font-weight: 600;
+            border-radius: 12px; cursor: pointer;
+            transition: all 0.2s ease;
+            display: block; margin: 30px auto 0;
+        }
+        .btn-primary:hover { background: var(--blue-400); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .btn-primary:disabled { background: var(--slate-500); cursor: not-allowed; transform: none; }
+        .dimensions-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 25px 0; }
+        .dimension-item { padding: 20px 15px; border-radius: 15px; text-align: center; background: var(--slate-100); }
+        .dimension-item .icon { font-size: 2rem; margin-bottom: 8px; }
+        .dimension-item .label { font-size: 0.85rem; font-weight: 600; }
+        .dimension-item.spatial .label { color: var(--accent-spatial); }
+        .dimension-item.temporal .label { color: var(--accent-temporal); }
+        .dimension-item.reference .label { color: var(--accent-reference); }
+        /* Results */
+        .result-section { margin: 25px 0; }
+        .result-section h3 { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.3rem; margin-bottom: 15px; }
+        .score-bar-container { margin: 10px 0 20px; }
+        .score-bar { height: 20px; background: var(--slate-100); border-radius: 10px; position: relative; overflow: hidden; }
+        .score-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+        .score-fill.spatial { background: var(--accent-spatial); }
+        .score-fill.temporal { background: var(--accent-temporal); }
+        .score-fill.reference { background: var(--accent-reference); }
+        .score-labels { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; }
+        .profile-name { font-size: 1.8rem; color: var(--blue-500); font-weight: 700; margin: 10px 0; }
+        .profile-description { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">Parser <span>Profile</span> for Kids</div>
+            <div class="tagline">Discover how your brain likes to think!</div>
+        </header>
+
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Ready to start!</div>
+        </div>
+
+        <!-- Welcome Screen -->
+        <div class="screen active" id="welcomeScreen">
+            <div class="card">
+                <h1>How Do You Think?</h1>
+                <p>Answer 9 fun questions to discover your thinking style! There are no right or wrong answers - just pick what feels most like YOU.</p>
+
+                <div class="dimensions-preview">
+                    <div class="dimension-item spatial">
+                        <div class="icon">🧩</div>
+                        <div class="label">Big Picture or Details?</div>
+                    </div>
+                    <div class="dimension-item temporal">
+                        <div class="icon">⏰</div>
+                        <div class="label">Past, Present, or Future?</div>
+                    </div>
+                    <div class="dimension-item reference">
+                        <div class="icon">👥</div>
+                        <div class="label">Me or Others?</div>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="startAssessment()">Let's Go!</button>
+            </div>
+        </div>
+
+        <!-- Question Screen -->
+        <div class="screen" id="questionScreen">
+            <div class="card">
+                <div class="question-number" id="questionNumber">Question 1 of 9</div>
+                <h2 id="questionText">Loading...</h2>
+                <div class="options" id="optionsContainer"></div>
+                <button class="btn-primary" id="nextBtn" onclick="nextQuestion()" disabled>Next Question</button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div class="screen" id="resultsScreen">
+            <div class="card">
+                <h1>Your Thinking Style!</h1>
+                <div class="profile-name" id="profileName">Loading...</div>
+                <p class="profile-description" id="profileDescription"></p>
+
+                <div class="result-section">
+                    <h3>🧩 How You See Things</h3>
+                    <div class="score-bar-container">
+                        <div class="score-bar">
+                            <div class="score-fill spatial" id="spatialBar"></div>
+                        </div>
+                        <div class="score-labels">
+                            <span>Step-by-Step</span>
+                            <span>Big Picture</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-section">
+                    <h3>⏰ Where Your Mind Goes</h3>
+                    <div class="score-bar-container">
+                        <div class="score-bar">
+                            <div class="score-fill temporal" id="temporalBar"></div>
+                        </div>
+                        <div class="score-labels">
+                            <span>Looking Back</span>
+                            <span>Looking Ahead</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-section">
+                    <h3>👥 Who You Think About</h3>
+                    <div class="score-bar-container">
+                        <div class="score-bar">
+                            <div class="score-fill reference" id="referenceBar"></div>
+                        </div>
+                        <div class="score-labels">
+                            <span>Others First</span>
+                            <span>Me First</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="customerIdDisplay" style="display:none;margin:16px 0;padding:12px 20px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;text-align:center;">
+                    <div style="font-size:0.75rem;color:#64748b;margin-bottom:4px;">Customer ID</div>
+                    <div id="customerIdValue" style="font-weight:700;font-size:1.1rem;letter-spacing:0.08em;color:#2563eb;font-family:monospace;"></div>
+                </div>
+                <button class="btn-primary" onclick="restartAssessment()">Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 9 Questions for Kids Assessment
+        const questions = [
+            // SPATIAL QUESTIONS (3)
+            {
+                id: 'spatial_1',
+                dimension: 'spatial',
+                text: 'You\'re building something with LEGO. What do you do first?',
+                poleDirection: 'abstract-to-concrete',
+                options: [
+                    { letter: 'A', text: 'Think about what cool thing I want to make', value: 5 },
+                    { letter: 'B', text: 'Picture the finished thing, then start building', value: 4 },
+                    { letter: 'C', text: 'Sometimes I plan, sometimes I just start - it depends!', value: 3 },
+                    { letter: 'D', text: 'Look at the pieces and start connecting them', value: 2 },
+                    { letter: 'E', text: 'Follow the instructions step by step', value: 1 }
+                ]
+            },
+            {
+                id: 'spatial_2',
+                dimension: 'spatial',
+                text: 'A friend asks for help with homework. What do you usually do?',
+                poleDirection: 'concrete-to-abstract',
+                options: [
+                    { letter: 'A', text: 'Show them exactly how to do the problem', value: 1 },
+                    { letter: 'B', text: 'Walk through the steps with some explanation', value: 2 },
+                    { letter: 'C', text: 'A mix of showing and explaining - whatever they need!', value: 3 },
+                    { letter: 'D', text: 'Explain why it works with some examples', value: 4 },
+                    { letter: 'E', text: 'Help them understand the big idea behind it', value: 5 }
+                ]
+            },
+            {
+                id: 'spatial_3',
+                dimension: 'spatial',
+                text: 'When you remember a fun day, what pops into your head first?',
+                poleDirection: 'concrete-to-abstract',
+                options: [
+                    { letter: 'A', text: 'Exactly what I saw, heard, and ate', value: 1 },
+                    { letter: 'B', text: 'Specific moments that happened', value: 2 },
+                    { letter: 'C', text: 'Both the details and the feelings mixed together', value: 3 },
+                    { letter: 'D', text: 'How awesome it felt overall', value: 4 },
+                    { letter: 'E', text: 'The happy feeling and why it was special', value: 5 }
+                ]
+            },
+
+            // TEMPORAL QUESTIONS (3)
+            {
+                id: 'temporal_1',
+                dimension: 'temporal',
+                text: 'You didn\'t do well on a test. What do you think about?',
+                poleDirection: 'past-to-future',
+                options: [
+                    { letter: 'A', text: 'What I should have studied more', value: 1 },
+                    { letter: 'B', text: 'What went wrong this time', value: 2 },
+                    { letter: 'C', text: 'Both what happened and what\'s next', value: 3 },
+                    { letter: 'D', text: 'How I\'ll do better next time', value: 4 },
+                    { letter: 'E', text: 'My plan for the next test', value: 5 }
+                ]
+            },
+            {
+                id: 'temporal_2',
+                dimension: 'temporal',
+                text: 'You\'re planning your birthday party. What\'s most exciting?',
+                poleDirection: 'past-to-future',
+                options: [
+                    { letter: 'A', text: 'Doing the same fun stuff that worked last year', value: 1 },
+                    { letter: 'B', text: 'Using ideas from parties I\'ve loved before', value: 2 },
+                    { letter: 'C', text: 'Mixing old favorites with new ideas', value: 3 },
+                    { letter: 'D', text: 'Trying some new things with a few favorites', value: 4 },
+                    { letter: 'E', text: 'Dreaming up something totally new and different!', value: 5 }
+                ]
+            },
+            {
+                id: 'temporal_3',
+                dimension: 'temporal',
+                text: 'In stories and movies, what\'s your favorite part?',
+                poleDirection: 'past-to-future',
+                options: [
+                    { letter: 'A', text: 'Learning about the characters\' history and backstory', value: 1 },
+                    { letter: 'B', text: 'Flashbacks that explain why things are the way they are', value: 2 },
+                    { letter: 'C', text: 'What\'s happening right now in the action', value: 3 },
+                    { letter: 'D', text: 'Hints about what exciting things might happen next', value: 4 },
+                    { letter: 'E', text: 'Imagining what will happen in the future or sequel!', value: 5 }
+                ]
+            },
+
+            // REFERENCE QUESTIONS (3)
+            {
+                id: 'reference_1',
+                dimension: 'reference',
+                text: 'Your team wins a game! What\'s your first thought?',
+                poleDirection: 'other-to-self',
+                options: [
+                    { letter: 'A', text: 'Everyone played so well together!', value: 1 },
+                    { letter: 'B', text: 'The team did great, and I helped!', value: 2 },
+                    { letter: 'C', text: 'We all worked hard and it paid off!', value: 3 },
+                    { letter: 'D', text: 'I played well and so did my teammates!', value: 4 },
+                    { letter: 'E', text: 'Yes! I did awesome!', value: 5 }
+                ]
+            },
+            {
+                id: 'reference_2',
+                dimension: 'reference',
+                text: 'There\'s one slice of pizza left. What do you do?',
+                poleDirection: 'self-to-other',
+                options: [
+                    { letter: 'A', text: 'Grab it - I\'m hungry!', value: 5 },
+                    { letter: 'B', text: 'Take it but offer to share half', value: 4 },
+                    { letter: 'C', text: 'Ask if anyone else wants it too', value: 3 },
+                    { letter: 'D', text: 'Offer it to others first, but hope they say no', value: 2 },
+                    { letter: 'E', text: 'Ask who else wants it - I can get food later', value: 1 }
+                ]
+            },
+            {
+                id: 'reference_3',
+                dimension: 'reference',
+                text: 'When picking what game to play with friends, what do you think about?',
+                poleDirection: 'self-to-other',
+                options: [
+                    { letter: 'A', text: 'What game I want to play most', value: 5 },
+                    { letter: 'B', text: 'What I like, but I\'ll consider what others want', value: 4 },
+                    { letter: 'C', text: 'Finding something everyone will enjoy', value: 3 },
+                    { letter: 'D', text: 'What my friends want, but I\'ll share my ideas', value: 2 },
+                    { letter: 'E', text: 'What would make my friends happiest', value: 1 }
+                ]
+            }
+        ];
+
+        // State
+        let currentQuestion = 0;
+        let answers = {};
+        let scores = { spatial: [], temporal: [], reference: [] };
+
+        // Profile descriptions for kids
+        const profileDescriptions = {
+            'high-high-high': { name: 'The Dreamer', desc: 'You love big ideas, think about the future, and know what you want! You\'re a creative thinker who sees possibilities everywhere.' },
+            'high-high-low': { name: 'The Team Captain', desc: 'You see the big picture, look to the future, and care about everyone around you! You\'re a natural leader.' },
+            'high-high-mid': { name: 'The Visionary', desc: 'You love thinking about ideas and possibilities. You balance caring about yourself and others perfectly!' },
+            'high-low-high': { name: 'The Artist', desc: 'You think in big ideas, learn from the past, and trust your own vision! You\'re creative and confident.' },
+            'high-low-low': { name: 'The Storyteller', desc: 'You see big pictures, love history and memories, and care deeply about others! You connect people through stories.' },
+            'high-low-mid': { name: 'The Wise One', desc: 'You think big, value experience, and balance different viewpoints! You have wisdom beyond your years.' },
+            'high-mid-high': { name: 'The Inventor', desc: 'You love ideas, live in the moment, and follow your own path! You come up with amazing new things.' },
+            'high-mid-low': { name: 'The Helper', desc: 'You see the big picture, stay present, and always think of others! You make everyone feel included.' },
+            'high-mid-mid': { name: 'The Philosopher', desc: 'You think deeply about ideas and meaning. You\'re thoughtful and see things others miss!' },
+            'low-high-high': { name: 'The Builder', desc: 'You love details, plan for the future, and know what you want! You make things happen step by step.' },
+            'low-high-low': { name: 'The Organizer', desc: 'You\'re detail-focused, plan ahead, and help everyone! You keep things running smoothly.' },
+            'low-high-mid': { name: 'The Planner', desc: 'You pay attention to details and always think about what\'s next! You\'re prepared for anything.' },
+            'low-low-high': { name: 'The Expert', desc: 'You love details, learn from experience, and trust yourself! You become really good at what you focus on.' },
+            'low-low-low': { name: 'The Caretaker', desc: 'You notice small things, remember what works, and take care of others! You\'re reliable and caring.' },
+            'low-low-mid': { name: 'The Craftsperson', desc: 'You focus on details and learn from practice. You get better and better at everything you try!' },
+            'low-mid-high': { name: 'The Maker', desc: 'You love working with your hands, stay focused, and follow your interests! You create cool stuff.' },
+            'low-mid-low': { name: 'The Friend', desc: 'You notice little things, live in the moment, and always think of others! You\'re an amazing friend.' },
+            'low-mid-mid': { name: 'The Observer', desc: 'You pay attention to details and what\'s happening now. You notice things others miss!' },
+            'mid-high-high': { name: 'The Explorer', desc: 'You balance big and small thinking, look to the future, and are confident! You love discovering new things.' },
+            'mid-high-low': { name: 'The Guide', desc: 'You see both details and big picture, plan ahead, and help others! You\'re a great teacher.' },
+            'mid-high-mid': { name: 'The Strategist', desc: 'You think in many ways and always plan ahead! You\'re great at figuring out the best approach.' },
+            'mid-low-high': { name: 'The Collector', desc: 'You see things many ways, value the past, and know what you like! You appreciate special things.' },
+            'mid-low-low': { name: 'The Nurturer', desc: 'You\'re flexible in thinking, learn from experience, and care for others! You make everyone feel safe.' },
+            'mid-low-mid': { name: 'The Rememberer', desc: 'You think in balanced ways and value memories and experience. You learn from everything!' },
+            'mid-mid-high': { name: 'The Individual', desc: 'You\'re balanced in how you think and live in the moment. You\'re confident being yourself!' },
+            'mid-mid-low': { name: 'The Connector', desc: 'You see things from many angles and bring people together! You\'re adaptable and caring.' },
+            'mid-mid-mid': { name: 'The Balanced Thinker', desc: 'You\'re flexible in every way! You can think big or small, about past or future, about yourself or others. You adapt to any situation!' }
+        };
+
+        function startAssessment() {
+            document.getElementById('welcomeScreen').classList.remove('active');
+            document.getElementById('questionScreen').classList.add('active');
+            showQuestion(0);
+        }
+
+        function showQuestion(index) {
+            const q = questions[index];
+            document.getElementById('questionNumber').textContent = `Question ${index + 1} of 9`;
+            document.getElementById('questionText').textContent = q.text;
+
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+
+            q.options.forEach(opt => {
+                const div = document.createElement('div');
+                div.className = 'option';
+                div.innerHTML = `<span class="option-letter">${opt.letter}</span><span>${opt.text}</span>`;
+                div.onclick = () => selectOption(div, q.id, opt.value, q.dimension, q.poleDirection);
+                container.appendChild(div);
+            });
+
+            document.getElementById('nextBtn').disabled = !answers[q.id];
+            document.getElementById('nextBtn').textContent = index === 8 ? 'See My Results!' : 'Next Question';
+
+            // Update progress
+            const progress = ((index) / 9) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressText').textContent = `Question ${index + 1} of 9`;
+        }
+
+        function selectOption(element, questionId, value, dimension, poleDirection) {
+            // Clear previous selection
+            document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+
+            answers[questionId] = { value, dimension, poleDirection };
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        function nextQuestion() {
+            const q = questions[currentQuestion];
+            const answer = answers[q.id];
+
+            // Normalize value based on pole direction
+            let normalizedValue = answer.value;
+            // Values are already 1-5, we'll compute percentages at the end
+
+            scores[answer.dimension].push(normalizedValue);
+
+            currentQuestion++;
+
+            if (currentQuestion >= questions.length) {
+                showResults();
+            } else {
+                showQuestion(currentQuestion);
+            }
+        }
+
+        function showResults() {
+            // Calculate average scores for each dimension (1-5 scale)
+            const avgSpatial = scores.spatial.reduce((a, b) => a + b, 0) / scores.spatial.length;
+            const avgTemporal = scores.temporal.reduce((a, b) => a + b, 0) / scores.temporal.length;
+            const avgReference = scores.reference.reduce((a, b) => a + b, 0) / scores.reference.length;
+
+            // Convert to 0-100 scale
+            const spatialPercent = ((avgSpatial - 1) / 4) * 100;
+            const temporalPercent = ((avgTemporal - 1) / 4) * 100;
+            const referencePercent = ((avgReference - 1) / 4) * 100;
+
+            // Determine profile key (low/mid/high for each dimension)
+            const getLevel = (pct) => pct < 33 ? 'low' : pct > 66 ? 'high' : 'mid';
+            const profileKey = `${getLevel(spatialPercent)}-${getLevel(temporalPercent)}-${getLevel(referencePercent)}`;
+
+            const profile = profileDescriptions[profileKey] || profileDescriptions['mid-mid-mid'];
+
+            // Log completion — generates customer ID and sends notification
+            fetch('/api/log-completion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    profileName: profile.name + ' (Kids)',
+                    profileCode: profileKey,
+                    scores: {
+                        spatial: Math.round(spatialPercent),
+                        temporal: Math.round(temporalPercent),
+                        reference: Math.round(referencePercent)
+                    },
+                    emailProvided: false,
+                    assessmentType: 'kids',
+                    overview: profile.desc || ''
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.customerId) {
+                    document.getElementById('customerIdValue').textContent = data.customerId;
+                    document.getElementById('customerIdDisplay').style.display = 'block';
+                }
+            }).catch(() => {});
+
+            // Update UI
+            document.getElementById('questionScreen').classList.remove('active');
+            document.getElementById('resultsScreen').classList.add('active');
+
+            document.getElementById('profileName').textContent = profile.name;
+            document.getElementById('profileDescription').textContent = profile.desc;
+
+            document.getElementById('spatialBar').style.width = spatialPercent + '%';
+            document.getElementById('temporalBar').style.width = temporalPercent + '%';
+            document.getElementById('referenceBar').style.width = referencePercent + '%';
+
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('progressText').textContent = 'Complete!';
+        }
+
+        function restartAssessment() {
+            currentQuestion = 0;
+            answers = {};
+            scores = { spatial: [], temporal: [], reference: [] };
+
+            document.getElementById('resultsScreen').classList.remove('active');
+            document.getElementById('welcomeScreen').classList.add('active');
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = 'Ready to start!';
+        }
+    </script>
+</body>
+</html>
