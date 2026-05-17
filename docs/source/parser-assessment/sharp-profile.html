@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHARP Profile | Parser Profile™</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue-900: #0C2340;
+            --blue-700: #1B3A5C;
+            --blue-500: #2563EB;
+            --blue-400: #3B82F6;
+            --slate-900: #1A1A2E;
+            --slate-700: #334155;
+            --slate-500: #64748B;
+            --slate-300: #CBD5E1;
+            --slate-100: #F1F5F9;
+            --white: #FFFFFF;
+            --red-600: #DC2626;
+            --bg-page: #F7F8FA;
+            --bg-card: #FFFFFF;
+            --text-primary: #1A1A2E;
+            --text-secondary: #334155;
+            --text-muted: #64748B;
+            --border: rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'IBM Plex Sans', system-ui, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--blue-900) 0%, var(--blue-700) 100%);
+            padding: 48px 40px;
+            color: white;
+            text-align: center;
+        }
+        
+        .header-logo {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .header-logo span { color: var(--blue-400); }
+        
+        .header-code {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            opacity: 0.8;
+            margin-bottom: 16px;
+        }
+        
+        .header-title {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        
+        .header-tagline {
+            font-size: 1.25rem;
+            opacity: 0.95;
+        }
+        
+        main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        
+        section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 36px;
+            margin-bottom: 28px;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .section-title {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--blue-900);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .section-icon {
+            font-size: 1.6rem;
+        }
+        
+        .overview-text {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+        
+        .overview-text:last-child {
+            margin-bottom: 0;
+        }
+        
+        .phrase-box {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(59, 130, 246, 0.05));
+            border-left: 4px solid var(--blue-500);
+            padding: 24px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-style: italic;
+            color: var(--slate-900);
+            line-height: 1.7;
+        }
+        
+        .list-section {
+            margin-top: 12px;
+        }
+        
+        .list-item {
+            margin-bottom: 12px;
+            padding-left: 24px;
+            position: relative;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+        
+        .list-item::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--blue-500);
+            font-weight: 600;
+        }
+        
+        .strength-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+        }
+        
+        .strength-card {
+            background: var(--slate-100);
+            padding: 24px;
+            border-radius: 10px;
+            border-left: 4px solid var(--blue-500);
+        }
+        
+        .strength-card-title {
+            font-weight: 600;
+            color: var(--blue-900);
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        
+        .strength-card-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        .challenge-card {
+            background: #fff8f0;
+            border-left: 4px solid #f59e0b;
+            padding: 24px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .challenge-title {
+            font-weight: 600;
+            color: var(--slate-900);
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        
+        .challenge-text {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        
+        .remedy-label {
+            font-weight: 600;
+            color: #16a34a;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .remedy-text {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+        
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 28px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-logo">Parser <span>Profile</span>™</div>
+        <div class="header-code">Concrete • Past • Self</div>
+        <div class="header-title">SHARP</div>
+        <div class="header-tagline">The one who remembers what actually happened</div>
+    </header>
+    
+    <main>
+        <!-- OVERVIEW -->
+        <section>
+            <div class="section-title">🎯 Overview</div>
+            <div class="overview-text">
+                You were right. You knew you were right. And you watched it fail exactly the way you said it would.
+            </div>
+            <div class="overview-text">
+                This isn't arrogance. It's pattern recognition built from years of paying attention when others didn't. You remember the last three times someone tried this approach. You remember who promised what, what actually got delivered, and what it cost to clean up afterward.
+            </div>
+            <div class="overview-text">
+                They call it "being negative." You call it having a memory.
+            </div>
+            <div class="overview-text">
+                You've stopped trying to warn people. The ones who listen didn't need the warning. The ones who needed it won't listen until they've lived it themselves. So you wait. You do your part. And when it breaks—because it will—you're the one they call to fix it.
+            </div>
+            <div class="overview-text">
+                You don't trust theories. You trust results. You don't trust credentials. You trust track records. You don't trust enthusiasm. You trust the person who's done it before, failed, adjusted, and done it again.
+            </div>
+            <div class="overview-text">
+                That person is usually you.
+            </div>
+        </section>
+        
+        <!-- THE PHRASE -->
+        <section>
+            <div class="section-title">💡 The Phrase That Hits Home</div>
+            <div class="phrase-box">
+                "You're not negative. You're accurate. There's a difference, and people who can't tell are usually selling something."
+            </div>
+        </section>
+        
+        <!-- HOW YOU LEARN -->
+        <section>
+            <div class="section-title">📚 How You Learn</div>
+            <div class="list-section">
+                <div class="list-item">The manual made sense after you'd already figured it out by doing it wrong twice</div>
+                <div class="list-item">You remember the instructor's face when you asked "but has this actually worked?"</div>
+                <div class="list-item">The certification was easy because you'd already learned it the hard way</div>
+                <div class="list-item">You stopped reading books about your field—you've lived more than most authors have studied</div>
+                <div class="list-item">The best lesson came from the worst project</div>
+                <div class="list-item">You learned more from one failure than from ten trainings</div>
+            </div>
+        </section>
+        
+        <!-- HOW YOU COMMUNICATE -->
+        <section>
+            <div class="section-title">💬 How You Communicate</div>
+            <div class="list-section">
+                <div class="list-item">"Let me tell you what happened last time."</div>
+                <div class="list-item">"That's not what the data says."</div>
+                <div class="list-item">"Who's actually going to do this?"</div>
+                <div class="list-item">The silence when someone asks for your opinion and you know they don't want it</div>
+                <div class="list-item">The shorter your answer, the more certain you are</div>
+                <div class="list-item">You've said "I told you so" maybe twice out loud. You've thought it hundreds of times.</div>
+            </div>
+        </section>
+        
+        <!-- THE SECRET -->
+        <section>
+            <div class="section-title">🔮 The Secret</div>
+            <div class="overview-text">
+                You're tired.
+            </div>
+            <div class="overview-text">
+                Not physically. Something deeper. The exhaustion of watching preventable failures happen on schedule. Of being the only one in the room who remembers why we stopped doing it that way. Of knowing exactly how this plays out and not being able to stop it.
+            </div>
+            <div class="overview-text">
+                You've saved projects, teams, maybe entire companies from disasters they'll never know about. You caught what everyone else missed. You stayed late fixing what shouldn't have broken. And the next morning, someone else presented the success as their own.
+            </div>
+            <div class="overview-text">
+                The visionaries get promoted. The confident presenters get funded. And you—the one who actually knows what works—get labeled "not a culture fit" or "resistant to change."
+            </div>
+            <div class="overview-text">
+                You're not resistant to change. You're resistant to stupidity dressed up as innovation.
+            </div>
+            <div class="overview-text">
+                The deepest part: you've started keeping your mouth shut. Not because you've stopped seeing the problems. Because you've learned that being right costs more than being quiet. And you're not sure that's who you wanted to become.
+            </div>
+        </section>
+        
+        <!-- STRENGTHS -->
+        <section>
+            <div class="section-title">⚡ Your Cognitive Strengths</div>
+            <div class="strength-grid">
+                <div class="strength-card">
+                    <div class="strength-card-title">Earned Pattern Recognition</div>
+                    <div class="strength-card-desc">You've seen enough to know how this ends. Not from theory—from being there when it broke, when it shipped, when it failed and had to be rebuilt. Your predictions aren't guesses. They're memories of futures you've already lived through.</div>
+                </div>
+                
+                <div class="strength-card">
+                    <div class="strength-card-title">Flaw Detection</div>
+                    <div class="strength-card-desc">The gap in the plan that everyone else missed. The assumption that won't survive contact with reality. The dependency no one thought to check. You see it because you've been burned by it before.</div>
+                </div>
+                
+                <div class="strength-card">
+                    <div class="strength-card-title">Depth Over Breadth</div>
+                    <div class="strength-card-desc">You didn't learn your field from a course. You lived in it. Failed in it. Learned what the textbooks don't cover because the textbook authors never did it for real. Your knowledge has weight because it was earned.</div>
+                </div>
+                
+                <div class="strength-card">
+                    <div class="strength-card-title">Reliable Delivery</div>
+                    <div class="strength-card-desc">When you say it'll be done, it gets done. When you say it won't work, it won't. Your estimates come from experience, not optimism. People learn to trust your word because your word has a track record.</div>
+                </div>
+                
+                <div class="strength-card">
+                    <div class="strength-card-title">Cut Through</div>
+                    <div class="strength-card-desc">You don't need thirty minutes to find the problem. You often see it while they're still explaining. Not because you're smarter—because you've seen this exact shape before and you remember what was hiding inside it.</div>
+                </div>
+                
+                <div class="strength-card">
+                    <div class="strength-card-title">Institutional Memory</div>
+                    <div class="strength-card-desc">You remember why we stopped doing it that way. You remember who promised what and what actually got delivered. In a world of short tenures and shorter memories, you're the continuity that keeps organizations from repeating their most expensive mistakes.</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- CHALLENGES -->
+        <section>
+            <div class="section-title">🎯 Your Challenges & Growth</div>
+            
+            <div class="challenge-card">
+                <div class="challenge-title">The Right Pattern, Wrong Context</div>
+                <div class="challenge-text">
+                    It looked exactly like the thing that failed before. Same pitch, same confidence, same gaps. But the conditions had changed and you didn't notice. Your experience matched so strongly that you stopped checking whether the match was real.
+                </div>
+                <div class="remedy-label">→ Remedy:</div>
+                <div class="remedy-text">
+                    Before you reject, list what made it fail last time. Then check: are those conditions present now? Let your experience inform the question, not assume the answer.
+                </div>
+            </div>
+            
+            <div class="challenge-card">
+                <div class="challenge-title">The Ideas That Stopped Coming</div>
+                <div class="challenge-text">
+                    People used to bring you their plans. Now they don't. Not because you were wrong about the flaws—you were usually right. But being right isn't the same as being helpful, and somewhere along the way, people decided it was easier not to ask.
+                </div>
+                <div class="remedy-label">→ Remedy:</div>
+                <div class="remedy-text">
+                    Lead with what works before you name what doesn't. Your flaw-detection is valuable, but only if people stay in the room long enough to hear it.
+                </div>
+            </div>
+            
+            <div class="challenge-card">
+                <div class="challenge-title">The Closed Door</div>
+                <div class="challenge-text">
+                    The new approach that actually would have worked. The person who had something to teach you. The door you didn't walk through because it looked like doors that led nowhere before.
+                </div>
+                <div class="remedy-label">→ Remedy:</div>
+                <div class="remedy-text">
+                    Small experiments. Low stakes. Let results update your pattern library instead of letting your pattern library veto the experiment.
+                </div>
+            </div>
+            
+            <div class="challenge-card">
+                <div class="challenge-title">The Cost of Being Right</div>
+                <div class="challenge-text">
+                    You were right, and it didn't matter. They did it anyway, it failed anyway, and you got to watch. Then they asked you to fix it without acknowledging you'd predicted it. Being right doesn't feel like winning anymore.
+                </div>
+                <div class="remedy-label">→ Remedy:</div>
+                <div class="remedy-text">
+                    Pick your battles by impact, not accuracy. Some fights are worth the cost of being ignored. Most aren't. Save your credibility for the ones that matter.
+                </div>
+            </div>
+            
+            <div class="challenge-card">
+                <div class="challenge-title">The Knowledge That Won't Transfer</div>
+                <div class="challenge-text">
+                    You know exactly how to do it, but when someone asks you to explain, what comes out is "because I've seen it." Your knowledge is encoded in experience, not language, and the translation always loses something.
+                </div>
+                <div class="remedy-label">→ Remedy:</div>
+                <div class="remedy-text">
+                    Tell the story, not the conclusion. The failure that taught you. The variation you tried. Your experience becomes transferable when you narrate the journey, not just the destination.
+                </div>
+            </div>
+            
+            <div class="challenge-card">
+                <div class="challenge-title">Alone With The Answer</div>
+                <div class="challenge-text">
+                    You knew the outcome before the meeting ended. Now you're waiting—weeks, sometimes months—for everyone else to arrive at what you already saw. The loneliness isn't about being different. It's about being early.
+                </div>
+                <div class="remedy-label">→ Remedy:</div>
+                <div class="remedy-text">
+                    Find your people. Not everyone—just enough. The ones who've also been there and don't need you to prove what you know. Their existence makes the waiting bearable.
+                </div>
+            </div>
+        </section>
+        
+    </main>
+    
+    <footer>
+        <p>Parser Profile™ © 2026 Cognition Blocks LLC. All rights reserved.</p>
+        <p>Developed by J.D. Mercer | Based on the Cognition Blocks Intelligence (CBI) Framework</p>
+    </footer>
+</body>
+</html>
