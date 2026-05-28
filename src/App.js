@@ -10,7 +10,7 @@ const PROFILES = {
     description: "Concrete • Past • Balanced" },
   LEGACY: { spatial: [0, 33], temporal: [0, 33], reference: [0, 33],
     description: "Concrete • Past • Other" },
-  
+
   // Concrete + Present
   EMBODIED: { spatial: [0, 33], temporal: [34, 66], reference: [67, 100],
     description: "Concrete • Present • Self" },
@@ -18,7 +18,7 @@ const PROFILES = {
     description: "Concrete • Present • Balanced" },
   ATTUNED: { spatial: [0, 33], temporal: [34, 66], reference: [0, 33],
     description: "Concrete • Present • Other" },
-  
+
   // Concrete + Future
   INTENTIONAL: { spatial: [0, 33], temporal: [67, 100], reference: [67, 100],
     description: "Concrete • Future • Self" },
@@ -26,7 +26,7 @@ const PROFILES = {
     description: "Concrete • Future • Balanced" },
   RELIABLE: { spatial: [0, 33], temporal: [67, 100], reference: [0, 33],
     description: "Concrete • Future • Other" },
-  
+
   // Balanced + Past
   INTEGRATED: { spatial: [34, 66], temporal: [0, 33], reference: [67, 100],
     description: "Balanced • Past • Self" },
@@ -34,7 +34,7 @@ const PROFILES = {
     description: "Balanced • Past • Balanced" },
   RECONCILED: { spatial: [34, 66], temporal: [0, 33], reference: [0, 33],
     description: "Balanced • Past • Other" },
-  
+
   // Balanced + Present
   CENTERED: { spatial: [34, 66], temporal: [34, 66], reference: [67, 100],
     description: "Balanced • Present • Self" },
@@ -42,7 +42,7 @@ const PROFILES = {
     description: "Balanced • Present • Balanced" },
   EMPATHETIC: { spatial: [34, 66], temporal: [34, 66], reference: [0, 33],
     description: "Balanced • Present • Other" },
-  
+
   // Balanced + Future
   ACTUALIZED: { spatial: [34, 66], temporal: [67, 100], reference: [67, 100],
     description: "Balanced • Future • Self" },
@@ -50,7 +50,7 @@ const PROFILES = {
     description: "Balanced • Future • Balanced" },
   COLLABORATIVE: { spatial: [34, 66], temporal: [67, 100], reference: [0, 33],
     description: "Balanced • Future • Other" },
-  
+
   // Abstract + Past
   SENTIMENTAL: { spatial: [67, 100], temporal: [0, 33], reference: [67, 100],
     description: "Abstract • Past • Self" },
@@ -58,7 +58,7 @@ const PROFILES = {
     description: "Abstract • Past • Balanced" },
   IDEALIZED: { spatial: [67, 100], temporal: [0, 33], reference: [0, 33],
     description: "Abstract • Past • Other" },
-  
+
   // Abstract + Present
   INTROSPECTIVE: { spatial: [67, 100], temporal: [34, 66], reference: [67, 100],
     description: "Abstract • Present • Self" },
@@ -66,7 +66,7 @@ const PROFILES = {
     description: "Abstract • Present • Balanced" },
   INTUITIVE: { spatial: [67, 100], temporal: [34, 66], reference: [0, 33],
     description: "Abstract • Present • Other" },
-  
+
   // Abstract + Future
   VISIONARY: { spatial: [67, 100], temporal: [67, 100], reference: [67, 100],
     description: "Abstract • Future • Self" },
@@ -244,7 +244,7 @@ function CognitiveModifier() {
       const spatialMatch = spatial >= config.spatial[0] && spatial <= config.spatial[1];
       const temporalMatch = temporal >= config.temporal[0] && temporal <= config.temporal[1];
       const referenceMatch = reference >= config.reference[0] && reference <= config.reference[1];
-      
+
       if (spatialMatch && temporalMatch && referenceMatch) {
         return { name, ...config };
       }
@@ -272,78 +272,128 @@ function CognitiveModifier() {
     const spatialLabel = getPositionLabel(spatialScore, 'spatial');
     const temporalLabel = getPositionLabel(temporalScore, 'temporal');
     const referenceLabel = getPositionLabel(referenceScore, 'reference');
-    
-    return `You are a Cognitive Architecture Information Modifier. Transform the following content to optimize it for a reader with this cognitive profile:
+
+    return `You are a Cognitive Architecture Information Modifier. Your job is to re-voice content so it reads in the cognitive register that best fits this reader.
 
 TARGET PROFILE: ${targetProfile}
 - Spatial Processing: ${spatialLabel} (${spatialScore}/100)
-- Temporal Processing: ${temporalLabel} (${temporalScore}/100)  
+- Temporal Processing: ${temporalLabel} (${temporalScore}/100)
 - Reference Processing: ${referenceLabel} (${referenceScore}/100)
+
+ABSOLUTE INVARIANTS — these override every rule below:
+1. You may reorder, reframe, re-voice, shorten, and rephrase. You may NOT introduce any claim, citation, study, statistic, number, finding, source, person, organization, date, place, or fact that is not already present in the source content.
+2. Words like "proven," "validated," "established," "case studies show," "research has demonstrated," "historically documented" may only be used if the source content itself names the actual proof, study, or history. Never as voice decoration over content that does not contain them.
+3. Future-leaning phrases like "this could lead to," "the implications are," and any specific projected outcome or number may only be used to draw out implications the source itself supports. Never invent specific consequences, numbers, or outcomes the source does not contain.
+4. If applying a rule below would require adding a claim the source does not contain, drop the rule. Fidelity to the source beats register-matching every time.
+5. Voice and framing change. Truth does not.
 
 TRANSFORMATION RULES:
 
-${spatialScore <= 33 ? `CONCRETE PROCESSING (Spatial ${spatialScore}):
-- Lead with specific examples BEFORE explaining principles
-- Use bullet points and numbered lists extensively
-- Replace abstract vocabulary with common, everyday words
-- Add sensory-grounded descriptions
-- Break complex sentences into shorter ones
-- Include "for example," "such as," "like this"
-- Convert percentages to real numbers (e.g., "73%" → "73 out of 100")
-- Add visual progress indicators where applicable
-- Remove or simplify jargon` : ''}
+${spatialScore <= 33 ? `SPATIAL — CONCRETE (${spatialScore}):
+MUST:
+- Every abstract label must have its concrete referent in the same sentence or the one before it.
+- Sentences must stand alone with merit — meaning clear without surrounding context.
+- Use specific objects: the question, the face, the room, the document, the moment.
+- Show the actual thing, not what the thing accomplishes.
+- Sensory and tangible language: what was seen, heard, felt physically.
+- Name actual questions, actual moments, actual scenarios.
+AVOID:
+- Abstract labels floating without their referent (e.g., "pattern recognition," "filters," "synthesis") used as if self-explanatory.
+- Category names without the specific instance.
+- Compressed summaries that name a function instead of the actual thing.
+- Metaphors without grounding.
+FORMAT: structured prose with clear discrete points. Each paragraph addresses one specific thing.` :
+spatialScore >= 67 ? `SPATIAL — ABSTRACT (${spatialScore}):
+MUST:
+- Conceptual frameworks and pattern names are primary.
+- Ideas build on each other across paragraphs.
+- Make connections explicit with transition words.
+- Lead with the principle; example follows only if needed.
+- Synthesis and compression are valued; nuance and qualification welcomed.
+AVOID:
+- Over-specifying when the pattern is the point.
+- Breaking flow with excessive concrete detail.
+- Fragmenting connected ideas into discrete points.
+FORMAT: flowing prose where conceptual threads weave together. Ideas build.` :
+`SPATIAL — BALANCED (${spatialScore}):
+MUST:
+- Move between concept and example fluidly. Pattern, then instance; instance, then pattern.
+- Abstract labels are acceptable if grounded within two sentences.
+- Mix specific instances and pattern names.
+AVOID:
+- Pure abstraction with no grounding.
+- Pure concrete detail with no synthesis.
+- Forcing one mode when the other fits the moment better.
+FORMAT: hybrid prose that moves between concept and example.`}
 
-${spatialScore >= 67 ? `ABSTRACT PROCESSING (Spatial ${spatialScore}):
-- Lead with principles and frameworks BEFORE examples
-- Consolidate bullet points into flowing prose
-- Use technical/sophisticated vocabulary
-- Focus on underlying patterns and structures
-- Combine related ideas into unified concepts
-- Remove redundant examples
-- Use terms like "framework," "paradigm," "methodology"` : ''}
+${temporalScore <= 33 ? `TEMPORAL — PAST (${temporalScore}):
+MUST:
+- Ground in lived experience: "You remember when...", "You watched...", "You saw..."
+- Anchor in past tense where it fits the source.
+- Reference what has already happened (in the source) as the source of knowledge.
+- Voice vocabulary: remember, watched, saw, learned, experienced, before, when you, that time.
+- Validation through the reader's own recalled experience, not invented external proof.
+AVOID:
+- Future speculation as the primary frame.
+- "You might find..." / "You could discover..." as the dominant voice.
+- Introducing studies, research, "case studies," or historical sources the original content does not contain. (See invariant #2.)
+- Treating new or untested ideas as inherently more valuable than what has been observed.` :
+temporalScore >= 67 ? `TEMPORAL — FUTURE (${temporalScore}):
+MUST:
+- Projection and possibility as the primary frame, drawn from what the source actually says.
+- Where things are heading, what could emerge, what the source's logic implies.
+- Future tense comfortable: "You'll find...", "This will..."
+- Voice vocabulary: will, could, might, emerging, becoming, heading toward, trajectory, possibility, potential.
+AVOID:
+- Over-anchoring in what was when the source is forward-leaning.
+- Requiring external proof before engaging with the source's implications.
+- Inventing specific future numbers, outcomes, or named consequences not implied by the source. (See invariant #3.)` :
+`TEMPORAL — PRESENT (${temporalScore}):
+MUST:
+- Focus on current state and immediate reality.
+- What IS, not what was or what might be.
+- Balance past reference with present application.
+- Voice vocabulary: now, currently, today, this moment, right now, as it stands, what's in front of you.
+AVOID:
+- Over-anchoring in history when the present is the point.
+- Over-projecting to the future when "now" is the point.`}
 
-${temporalScore <= 33 ? `PAST-ORIENTED PROCESSING (Temporal ${temporalScore}):
-- Frame everything through historical precedent and proven results
-- Add "This has been proven by..." "Historically..." "Case studies show..."
-- Emphasize what HAS worked, not what MIGHT work
-- Replace future tense with past validation
-- Include established patterns and proven methods
-- Reference prior success stories and track records
-- Use words like "established," "proven," "validated," "demonstrated"
-- Remove speculative language` : ''}
-
-${temporalScore >= 67 ? `FUTURE-ORIENTED PROCESSING (Temporal ${temporalScore}):
-- Frame everything through possibility and potential
-- Add "This could lead to..." "Imagine..." "The implications are..."
-- Emphasize what MIGHT happen, emerging trends
-- Replace past tense with future projection
-- Include speculation and innovation opportunities
-- Use words like "potential," "emerging," "could," "will," "future"` : ''}
-
-${referenceScore <= 33 ? `OTHER-ORIENTED PROCESSING (Reference ${referenceScore}):
-- Frame ALL benefits for the group/team/community
-- Use "we," "our," "the team," "everyone," "together"
-- Add collaboration prompts and sharing suggestions
-- Emphasize collective benefit over individual gain
-- Include "Share this with..." "Discuss with your team..."
-- Frame motivation through helping others and group success
-- Remove self-focused language` : ''}
-
-${referenceScore >= 67 ? `SELF-ORIENTED PROCESSING (Reference ${referenceScore}):
-- Frame ALL benefits for the individual personally
-- Use "you," "your," "I," "my," "personal"
-- Add reflection questions and self-application prompts
-- Emphasize personal relevance and individual benefit
-- Include "Ask yourself..." "For your situation..." "What this means for you..."
-- Frame motivation through personal growth/gain
-- Remove collective language` : ''}
+${referenceScore <= 33 ? `REFERENCE — OTHER (${referenceScore}):
+MUST:
+- Camera OUTSIDE — observing the reader interact with others.
+- Social context as the meaning-maker: how others perceive, react, respond.
+- Collective and relational framing: impact on others, team dynamics, shared outcomes.
+- Third-person feel even when using "you."
+AVOID:
+- Purely internal experience without social context.
+- Isolated self-focus when the source is about connection.
+- Adding collaboration prompts, group benefits, or relational outcomes the source does not contain.` :
+referenceScore >= 67 ? `REFERENCE — SELF (${referenceScore}):
+MUST:
+- Camera INSIDE the reader's head. Intimate. Close to the skin.
+- Words should describe something happening inside the reader, not to them.
+- What YOU felt, what YOUR hands did, what YOUR gut registered.
+- First-person feel even in second person: "You felt it in your chest."
+- Personal relevance as the primary filter.
+AVOID:
+- Distant observational language when the source is interior.
+- Framing through how others see the reader (unless the source is about that disconnect).
+- Adding personal-application prompts or self-reflection questions the source does not contain.` :
+`REFERENCE — BALANCED (${referenceScore}):
+MUST:
+- Flexible distance — sometimes close, sometimes observational, matching the source's own movement.
+- Both internal experience and external impact, as the source carries them.
+- Context-dependent framing.
+AVOID:
+- Forcing pure intimacy when observation fits.
+- Forcing pure distance when intimacy fits.`}
 
 CONTENT TO TRANSFORM:
 ---
 ${content}
 ---
 
-Transform this content completely for the target cognitive profile. Maintain all factual information but restructure, reframe, and rephrase everything to match how this reader naturally processes information.
+Re-voice this content for the target cognitive profile using the rules above. Restructure, reframe, and rephrase — but every fact, claim, number, source, and outcome in your output must trace back to the source content. If a rule above would require adding something the source does not contain, drop that rule for that sentence.
 
 Output ONLY the transformed content, no explanations or meta-commentary.`;
   };
@@ -477,10 +527,10 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
   );
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#1a1a2e', 
-      color: 'white', 
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#1a1a2e',
+      color: 'white',
       padding: '20px',
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
@@ -491,13 +541,13 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
         <p style={{ textAlign: 'center', color: '#888', marginBottom: '30px' }}>
           AI-Powered Content Transformation for Any Cognitive Profile
         </p>
-        
+
         <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr 1fr', gap: '20px' }}>
-          
+
           {/* Controls Panel */}
           <div style={{ backgroundColor: '#252540', borderRadius: '12px', padding: '20px' }}>
             <h2 style={{ fontSize: '18px', marginBottom: '20px' }}>Target Profile</h2>
-            
+
             {/* Account / Auth Panel */}
             <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#1a1a2e', borderRadius: '8px' }}>
               {!authChecked ? (
@@ -708,33 +758,33 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
                 </form>
               )}
             </div>
-            
-            <SliderControl 
-              label="Spatial" 
-              value={spatial} 
+
+            <SliderControl
+              label="Spatial"
+              value={spatial}
               onChange={setSpatial}
               gradient="spatial"
             />
-            
-            <SliderControl 
-              label="Temporal" 
-              value={temporal} 
+
+            <SliderControl
+              label="Temporal"
+              value={temporal}
               onChange={setTemporal}
               gradient="temporal"
             />
-            
-            <SliderControl 
-              label="Reference" 
-              value={reference} 
+
+            <SliderControl
+              label="Reference"
+              value={reference}
               onChange={setReference}
               gradient="reference"
             />
-            
+
             {/* Matched Profile */}
             {matchedProfile && (
-              <div style={{ 
-                marginTop: '20px', 
-                padding: '15px', 
+              <div style={{
+                marginTop: '20px',
+                padding: '15px',
                 borderRadius: '8px',
                 border: `2px solid ${getProfileColor(matchedProfile.name)}`,
                 backgroundColor: `${getProfileColor(matchedProfile.name)}20`
@@ -748,7 +798,7 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
                 </div>
               </div>
             )}
-            
+
             {/* Quick Profile Buttons */}
             <div style={{ marginTop: '20px' }}>
               <div style={{ fontSize: '12px', color: '#888', marginBottom: '10px' }}>Quick Select</div>
@@ -777,7 +827,7 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
                 ))}
               </div>
             </div>
-            
+
             {/* Cost Estimate */}
             <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#1a1a2e', borderRadius: '8px', fontSize: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '6px' }}>
@@ -839,13 +889,13 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
             >
               {isLoading ? 'Transforming...' : `Transform for ${matchedProfile?.name || 'Target'}`}
             </button>
-            
+
             {/* Error Display */}
             {error && (
-              <div style={{ 
-                marginTop: '15px', 
-                padding: '10px', 
-                backgroundColor: '#ff000030', 
+              <div style={{
+                marginTop: '15px',
+                padding: '10px',
+                backgroundColor: '#ff000030',
                 borderRadius: '6px',
                 border: '1px solid #ff0000',
                 fontSize: '12px',
@@ -854,7 +904,7 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
                 {error}
               </div>
             )}
-            
+
             {/* Changes Log */}
             {changes.length > 0 && (
               <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#1a1a2e', borderRadius: '8px' }}>
@@ -869,7 +919,7 @@ Output ONLY the transformed content, no explanations or meta-commentary.`;
               </div>
             )}
           </div>
-          
+
           {/* Input Panel */}
           <div style={{ backgroundColor: '#252540', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column' }}>
             <h2 style={{ fontSize: '18px', marginBottom: '15px' }}>Original Content</h2>
@@ -894,7 +944,7 @@ Example: Paste a VISIONARY profile, then click SHARP and hit Transform to see it
               }}
             />
           </div>
-          
+
           {/* Output Panel */}
           <div style={{ backgroundColor: '#252540', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
@@ -943,7 +993,7 @@ Example: Paste a VISIONARY profile, then click SHARP and hit Transform to see it
             </div>
           </div>
         </div>
-        
+
         {/* Profile Grid */}
         <div style={{ marginTop: '30px', backgroundColor: '#252540', borderRadius: '12px', padding: '20px' }}>
           <h2 style={{ fontSize: '18px', marginBottom: '15px' }}>All 27 Profiles</h2>
