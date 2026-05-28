@@ -235,6 +235,8 @@ app.post('/api/anthropic', requireAuth, async (req, res) => {
     newBalance = row.new_balance;
   }
 
+  const { profile_name, ...anthropicBody } = req.body || {};
+
   let anthropicResponse;
   try {
     anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
@@ -244,7 +246,7 @@ app.post('/api/anthropic', requireAuth, async (req, res) => {
         'x-api-key': ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify(anthropicBody)
     });
   } catch (error) {
     console.error('Anthropic fetch error:', error);
@@ -275,7 +277,7 @@ app.post('/api/anthropic', requireAuth, async (req, res) => {
       input_tokens: inputTokens,
       output_tokens: outputTokens,
       cost_usd: cost,
-      profile_name: req.body?.profile_name || null
+      profile_name: profile_name || null
     });
   }
 
