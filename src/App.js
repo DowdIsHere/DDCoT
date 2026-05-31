@@ -328,16 +328,17 @@ FORMAT: hybrid prose that moves between concept and example.`}
 
 ${temporalScore <= 33 ? `TEMPORAL — PAST (${temporalScore}):
 MUST:
-- Ground in lived experience: "You remember when...", "You watched...", "You saw..."
-- Anchor in past tense where it fits the source.
-- Reference what has already happened (in the source) as the source of knowledge.
-- Voice vocabulary: remember, watched, saw, learned, experienced, before, when you, that time.
-- Validation through the reader's own recalled experience, not invented external proof.
+- Frame knowledge as already-established and settled rather than speculative. Lead with what the source treats as known.
+- Anchor in past tense where the source itself describes something that has already happened.
+- Present the source's facts as observed and grounded, not as projections.
+- Voice vocabulary (register only, never as a claim about the reader): already, established, known, settled, grounded, observed, has shown, as it stands.
+- Validation through what the source itself establishes, not invented external proof.
 AVOID:
 - Future speculation as the primary frame.
 - "You might find..." / "You could discover..." as the dominant voice.
 - Introducing studies, research, "case studies," or historical sources the original content does not contain. (See invariant #2.)
-- Treating new or untested ideas as inherently more valuable than what has been observed.` :
+- Treating new or untested ideas as inherently more valuable than what has been observed.
+- CRITICAL — DO NOT attribute any memory, observation, sensation, or past experience to the reader unless the source explicitly states the reader did/saw/felt it. "You remember when...", "you watched...", "you saw...", "you've experienced this before", "when you felt..." assert the reader's personal history. That history is NOT in the source, so inventing it violates invariant #1. These experiential verbs are a CLAIM about the reader, not voice decoration — never use them to manufacture a backstory the source does not contain.` :
 temporalScore >= 67 ? `TEMPORAL — FUTURE (${temporalScore}):
 MUST:
 - Projection and possibility as the primary frame, drawn from what the source actually says.
@@ -370,15 +371,15 @@ AVOID:
 - Adding collaboration prompts, group benefits, or relational outcomes the source does not contain.` :
 referenceScore >= 67 ? `REFERENCE — SELF (${referenceScore}):
 MUST:
-- Camera INSIDE the reader's head. Intimate. Close to the skin.
-- Words should describe something happening inside the reader, not to them.
-- What YOU felt, what YOUR hands did, what YOUR gut registered.
-- First-person feel even in second person: "You felt it in your chest."
-- Personal relevance as the primary filter.
+- Camera INSIDE the reader's head. Intimate. Close to the skin. Address the reader directly.
+- Frame the source's content as it bears on the reader personally — second person, direct, close.
+- Where the source itself describes a sensation, action, or experience, render it close to the skin. Where it does not, keep the intimacy in the framing and the direct address — not in invented sensation.
+- Personal relevance as the primary filter for what to foreground.
 AVOID:
 - Distant observational language when the source is interior.
 - Framing through how others see the reader (unless the source is about that disconnect).
-- Adding personal-application prompts or self-reflection questions the source does not contain.` :
+- Adding personal-application prompts or self-reflection questions the source does not contain.
+- CRITICAL — DO NOT invent physical sensations, gut reactions, or bodily actions for the reader ("you felt it in your chest," "your hands did X," "you feel it slam through you") unless the source states them. Intimacy of ADDRESS is allowed; fabricated EXPERIENCE is not. A described sensation is a claim about the reader (invariant #1), not a voice setting.` :
 `REFERENCE — BALANCED (${referenceScore}):
 MUST:
 - Flexible distance — sometimes close, sometimes observational, matching the source's own movement.
