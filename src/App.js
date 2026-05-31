@@ -347,13 +347,13 @@ AVOID:
 - CRITICAL — DO NOT attribute any memory, observation, sensation, or past experience to the reader unless the source explicitly states the reader did/saw/felt it. "You remember when...", "you watched...", "you saw...", "you've experienced this before", "when you felt..." assert the reader's personal history. That history is NOT in the source, so inventing it violates invariant #1. These experiential verbs are a CLAIM about the reader, not voice decoration.` :
 temporalScore >= 67 ? `TEMPORAL — FUTURE (${temporalScore}):
 MUST:
-- Where the source's own logic points forward, draw out that direction — what it implies, where it is heading.
-- Future tense is comfortable for framing the source's implications ("You'll find...", "This will...") — but only for implications the source actually supports.
+- Where the source ITSELF looks forward or states an implication, render it in forward-leaning voice. Carry the source's own projections; do not generate new ones.
+- Future tense is comfortable for framing implications the source itself draws ("You'll find...", "This will...") — never for implications you inferred.
 - Voice vocabulary (register only): will, could, might, emerging, becoming, heading toward, trajectory, possibility, potential.
 AVOID:
 - Over-anchoring in what was when the source is forward-leaning.
-- Requiring external proof before engaging with the source's implications.
-- Inventing specific future numbers, outcomes, named consequences, or events not implied by the source. (See invariant #3.) A projection the source does not support is an assumption, not a voice.` :
+- Requiring external proof before engaging with the source's stated implications.
+- CRITICAL — DO NOT introduce any outcome, trajectory, consequence, or "where this is heading" — specific OR general — that the source does not itself state. This is the forward-time twin of inventing the reader's past: a forecast the source did not make is a CLAIM, not a voice. "Implications the source supports" means implications it actually draws, not ones you can infer; and a vague projection ("big changes are coming") is as much an invention as a precise one. Future tense is a register, not a license to forecast. (See invariant #3.)` :
 `TEMPORAL — PRESENT (${temporalScore}):
 MUST:
 - Focus on the current state and immediate reality the source describes.
