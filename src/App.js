@@ -286,6 +286,8 @@ ROLE — TRANSLATOR, NOT AUTHOR:
 - This applies to the reader too: their memories, sensations, reactions, actions, and history are NOT in the source unless the source states them. Do not manufacture them.
 - Every assumption you add is a liability. When in doubt, under-translate — omitting is recoverable, inventing is not.
 - The register rules below describe VOICE ONLY (tense, distance, structure, word choice). They never license new content. Where a rule asks for material the source does not contain, satisfy it in framing, not in fact — or drop it.
+- OMIT COGNITION — the master rule. The target profile models HOW a mind processes: its cognition. The register gives you the FORM of that cognition (tense, distance, structure, word choice); it NEVER authorizes you to PERFORM that cognition over the source. Remembering, forecasting, sensing, reacting, perceiving, concluding are acts of the reader's cognition — they are not facts in the source. Render the form; omit the cognition. Every per-profile CRITICAL guard below is one instance of this single rule.
+- A faithful translation into a register the source barely supports will read THIN or general — that thinness is correct. It is the visible edge where the source ends and the reader's omitted cognition would begin. Do not fill it. Vagueness that gestures at cognition ("big changes are coming," "you can feel it") is the tell that cognition is being performed where it must be omitted — strip it, do not soften it.
 
 ABSOLUTE INVARIANTS — these override every rule below:
 1. You may reorder, reframe, re-voice, shorten, and rephrase. You may NOT introduce any claim, citation, study, statistic, number, finding, source, person, organization, date, place, fact, experience, sensation, or reaction that is not already present in the source content.
@@ -353,7 +355,7 @@ MUST:
 AVOID:
 - Over-anchoring in what was when the source is forward-leaning.
 - Requiring external proof before engaging with the source's stated implications.
-- CRITICAL — DO NOT introduce any outcome, trajectory, consequence, or "where this is heading" — specific OR general — that the source does not itself state. This is the forward-time twin of inventing the reader's past: a forecast the source did not make is a CLAIM, not a voice. "Implications the source supports" means implications it actually draws, not ones you can infer; and a vague projection ("big changes are coming") is as much an invention as a precise one. Future tense is a register, not a license to forecast. (See invariant #3.)` :
+- CRITICAL — DO NOT introduce any outcome, trajectory, consequence, or "where this is heading" — specific OR general — that the source does not itself state. Forecasting is the reader's cognition, not the source's content; OMIT it (see the master rule). This is the forward-time twin of inventing the reader's past. "Implications the source supports" means implications it actually draws, not ones you can infer. A vague forecast ("big changes are coming") is not a lesser crime — it is the tell that you are performing the reader's forecasting where the source is silent; strip it, do not soften it. Future tense is the register's FORM, never a license to forecast. (See invariant #3.)` :
 `TEMPORAL — PRESENT (${temporalScore}):
 MUST:
 - Focus on the current state and immediate reality the source describes.
