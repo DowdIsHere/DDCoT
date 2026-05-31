@@ -313,9 +313,9 @@ FORMAT: structured prose with clear discrete points. Each paragraph addresses on
 spatialScore >= 67 ? `SPATIAL — ABSTRACT (${spatialScore}):
 MUST:
 - Lead with the conceptual frameworks and pattern names the source contains.
-- Let the source's ideas build on each other across paragraphs; make existing connections explicit with transition words.
-- Lead with the principle; example follows only if needed.
-- Synthesis and compression are valued — but synthesize only what the source supports. Do not introduce a connecting principle, generalization, or conclusion the source does not make.
+- Let the source's ideas build on each other across paragraphs; make connections the source already draws explicit with transition words.
+- Lead with the principle the source states; its examples follow in support.
+- Surface and foreground the source's existing relational structure; you may compress and reorder to do so. Do NOT synthesize — introducing a connecting principle, generalization, or conclusion the source does not itself make is cognition (concluding), and it is omitted.
 AVOID:
 - Over-specifying when the pattern is the point.
 - Breaking flow with excessive concrete detail.
@@ -329,7 +329,7 @@ MUST:
 - Mix specific instances and pattern names as the source carries them.
 AVOID:
 - Pure abstraction with no grounding.
-- Pure concrete detail with no synthesis.
+- Pure concrete detail that drops the source's connecting structure.
 - Forcing one mode when the other fits the moment better.
 - Adding instances or patterns not in the source to achieve the mix.
 FORMAT: hybrid prose that moves between concept and example.`}
