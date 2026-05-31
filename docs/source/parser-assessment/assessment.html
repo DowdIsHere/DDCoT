@@ -1,0 +1,2811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parser Profile™ | Developed by J.D. Mercer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Stripe.js SDK -->
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        /* Disable text selection */
+        body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        /* Allow selection in input fields */
+        input, textarea {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+
+        :root {
+            /* Blue trust palette */
+            --blue-900: #0C2340;
+            --blue-700: #1B3A5C;
+            --blue-600: #1E4D78;
+            --blue-500: #2563EB;
+            --blue-400: #3B82F6;
+            --blue-100: #DBEAFE;
+            --blue-50: #EFF6FF;
+
+            /* Neutral warmth */
+            --slate-900: #1A1A2E;
+            --slate-700: #334155;
+            --slate-500: #64748B;
+            --slate-300: #CBD5E1;
+            --slate-100: #F1F5F9;
+            --white: #FFFFFF;
+
+            /* Accent colors */
+            --amber-500: #D97706;
+            --amber-400: #F59E0B;
+            --green-600: #059669;
+
+            /* Semantic mappings */
+            --bg-page: #F7F8FA;
+            --bg-card: #FFFFFF;
+            --bg-inset: #F1F5F9;
+            --bg-primary: #F7F8FA;
+            --bg-secondary: #F1F5F9;
+
+            --text-primary: #1A1A2E;
+            --text-secondary: #334155;
+            --text-muted: #64748B;
+
+            --border: rgba(0, 0, 0, 0.08);
+            --border-strong: rgba(0, 0, 0, 0.14);
+
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+
+            /* Cognitive block accent colors */
+            --accent-spatial: #0D9488;
+            --accent-temporal: #D97706;
+            --accent-perceptual: #7C3AED;
+            --accent-pattern: #2563EB;
+            --accent-symbolic: #DC2626;
+            --accent-social: #DB2777;
+            --accent-self: #059669;
+            --accent-generative: #EA580C;
+            --accent-sequential: #F97316;
+            --accent-reference: #7C3AED;
+
+            /* Dim versions for backgrounds */
+            --accent-spatial-dim: rgba(13, 148, 136, 0.1);
+            --accent-temporal-dim: rgba(217, 119, 6, 0.1);
+            --accent-reference-dim: rgba(124, 58, 237, 0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'IBM Plex Sans', system-ui, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            letter-spacing: 0.01em;
+            font-size: 16px;
+        }
+        .mesh-bg {
+            display: none;
+        }
+        .container { max-width: 760px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+        header {
+            position: sticky; top: 0; z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 24px; margin: 0 -24px 30px;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+        .header-left { text-align: left; }
+        .header-right { display: flex; align-items: center; gap: 16px; }
+        .logo { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.1rem; font-weight: 700; color: var(--slate-900); }
+        .logo span { color: var(--blue-500); }
+        .tagline {
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--slate-500); font-size: 0.6rem;
+            text-transform: uppercase; letter-spacing: 0.15em;
+        }
+        .theme-toggle { display: none; }
+        .explore-link {
+            font-family: 'IBM Plex Sans', sans-serif;
+            color: var(--slate-500); text-decoration: none;
+            font-size: 0.85rem; font-weight: 500; transition: color 0.2s ease;
+        }
+        .explore-link:hover { color: var(--blue-500); }
+        .explore-cta {
+            display: inline-block; margin-bottom: 20px;
+            padding: 12px 28px; background: var(--blue-500);
+            border-radius: 8px; color: white;
+            text-decoration: none; font-weight: 600; font-size: 0.95rem;
+            transition: all 0.2s ease; border: none;
+            box-shadow: var(--shadow-sm);
+        }
+        .explore-cta:hover {
+            background: var(--blue-400);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        .progress-container { margin: 30px 0; }
+        .progress-bar { height: 6px; background: var(--slate-100); border-radius: 3px; overflow: hidden; }
+        .progress-fill {
+            height: 100%;
+            background: var(--blue-500);
+            transition: width 0.4s ease; width: 0%;
+        }
+        .progress-text {
+            display: flex; justify-content: space-between; margin-top: 10px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem; color: var(--text-muted);
+        }
+        .screen { display: none; animation: fadeIn 0.5s ease; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px;
+            box-shadow: var(--shadow-sm);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:hover {
+            border-color: var(--border-strong);
+            box-shadow: var(--shadow-md);
+        }
+        .card.centered { text-align: center; }
+        .card h1 { font-family: 'Source Serif 4', Georgia, serif; font-size: 2rem; font-weight: 700; margin-bottom: 16px; line-height: 1.2; color: var(--text-primary); }
+        .card h2 { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.6rem; font-weight: 600; margin-bottom: 16px; line-height: 1.3; color: var(--text-primary); }
+        .card p { color: var(--text-secondary); margin-bottom: 20px; font-size: 1rem; line-height: 1.6; }
+        .dimensions-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 30px 0; }
+        .dimension-item { padding: 20px 16px; border-radius: 12px; text-align: center; background: var(--bg-inset); border: 1px solid var(--border); }
+        .dimension-item.spatial { border-color: rgba(13, 148, 136, 0.3); }
+        .dimension-item.temporal { border-color: rgba(217, 119, 6, 0.3); }
+        .dimension-item.reference { border-color: rgba(124, 58, 237, 0.3); }
+        .dimension-item .icon { font-size: 1.8rem; margin-bottom: 8px; }
+        .dimension-item .label { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+        .dimension-item.spatial .label { color: var(--accent-spatial); }
+        .dimension-item.temporal .label { color: var(--accent-temporal); }
+        .dimension-item.reference .label { color: var(--accent-reference); }
+        .dimension-item .dimension-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+        .btn-primary {
+            background: var(--blue-500);
+            color: white; border: none;
+            padding: 14px 32px; font-size: 1rem; font-weight: 600;
+            border-radius: 8px; cursor: pointer;
+            transition: all 0.2s ease; font-family: 'IBM Plex Sans', sans-serif;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn-primary:hover { background: var(--blue-400); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .btn-secondary {
+            background: var(--bg-card); color: var(--text-secondary);
+            border: 1px solid var(--border);
+            padding: 14px 32px; font-size: 0.95rem; font-weight: 500;
+            border-radius: 8px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
+            transition: all 0.2s ease;
+        }
+        .btn-secondary:hover { background: var(--bg-inset); color: var(--text-primary); border-color: var(--border-strong); }
+        .btn-group { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+        /* Question Container */
+        .question-container { min-height: 60vh; display: flex; flex-direction: column; justify-content: center; }
+        .question-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 4px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.04em; margin-bottom: 20px;
+        }
+        .question-badge.spatial { background: #ECFDF5; color: var(--accent-spatial); }
+        .question-badge.temporal { background: #FFFBEB; color: var(--accent-temporal); }
+        .question-badge.reference { background: #EFF6FF; color: var(--accent-reference); }
+        .question-phase { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .question-text { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.4rem; font-weight: 400; line-height: 1.5; margin-bottom: 32px; color: var(--text-primary); }
+
+        /* A/B/C/D/E Options */
+        .answer-options { display: flex; flex-direction: column; gap: 12px; }
+        .answer-option {
+            display: flex; align-items: flex-start; gap: 14px;
+            padding: 16px 20px; border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            cursor: pointer; transition: all 0.2s ease;
+            text-align: left; font-family: inherit;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-sm);
+        }
+        .answer-option:hover { border-color: var(--border-strong); background: var(--bg-inset); }
+        .answer-option.selected { border-color: var(--blue-500); background: var(--blue-50); }
+        .answer-option.selected.temporal-q { border-color: var(--accent-temporal); background: #FFFBEB; }
+        .answer-option.selected.reference-q { border-color: var(--accent-reference); background: #EFF6FF; }
+        .answer-letter {
+            flex-shrink: 0; width: 32px; height: 32px;
+            border-radius: 8px; background: var(--bg-inset);
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600; font-size: 0.85rem; color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+        .answer-option:hover .answer-letter { color: var(--text-primary); }
+        .answer-option.selected .answer-letter { background: var(--blue-500); color: white; }
+        .answer-option.selected.temporal-q .answer-letter { background: var(--accent-temporal); color: white; }
+        .answer-option.selected.reference-q .answer-letter { background: var(--accent-reference); color: white; }
+        .answer-text { font-size: 1rem; line-height: 1.5; color: var(--text-secondary); }
+        .answer-option.selected .answer-text { color: var(--text-primary); }
+
+        /* Prediction Card */
+        .prediction-card { text-align: center; padding: 50px 40px; }
+        .prediction-icon { font-size: 3rem; margin-bottom: 20px; }
+        .prediction-text {
+            font-family: 'Source Serif 4', Georgia, serif; font-size: 1.3rem; font-weight: 400;
+            line-height: 1.5; color: var(--text-primary); margin-bottom: 30px; font-style: italic;
+        }
+        .prediction-check { color: var(--text-secondary); font-size: 1rem; margin-bottom: 30px; line-height: 1.7; }
+        .prediction-check strong { color: var(--amber-500); }
+
+        /* Navigation */
+        .nav-buttons { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
+        .btn-nav {
+            background: var(--bg-card); color: var(--text-primary);
+            border: 1px solid var(--border); padding: 12px 28px;
+            font-size: 0.95rem; font-weight: 500; border-radius: 8px;
+            cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; transition: all 0.2s ease;
+        }
+        .btn-nav:hover:not(:disabled) { background: var(--bg-inset); border-color: var(--border-strong); }
+        .btn-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-nav.next { background: var(--blue-500); color: white; border-color: var(--blue-500); }
+
+        /* Email Input */
+        .input-group { margin-bottom: 20px; }
+        .input-group input {
+            width: 100%; padding: 14px 18px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 12px;
+            color: var(--text-primary); font-size: 1rem; font-family: 'IBM Plex Sans', sans-serif;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .input-group input:focus { outline: none; border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .input-group input::placeholder { color: var(--text-muted); }
+        .input-group label { display: block; font-family: 'IBM Plex Sans', sans-serif; font-size: 0.85rem; font-weight: 500; color: var(--slate-700); margin-bottom: 8px; }
+        .skip-link { display: block; margin-top: 20px; color: var(--text-muted); font-size: 0.9rem; cursor: pointer; }
+        .skip-link:hover { color: var(--blue-500); }
+
+        /* Results Styles */
+        .results-header { text-align: center; margin-bottom: 40px; padding: 48px 24px; background: linear-gradient(175deg, #0C2340 0%, #1B3A5C 60%, #1E4D78 100%); border-radius: 16px; margin-left: -24px; margin-right: -24px; position: relative; overflow: hidden; }
+        .results-header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at 20% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%); pointer-events: none; }
+        .results-header .subtitle { color: rgba(255,255,255,0.82); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px; position: relative; }
+        .profile-name {
+            font-family: 'Source Serif 4', Georgia, serif; font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 700; margin-bottom: 8px;
+            color: white; position: relative;
+        }
+        .profile-code { font-family: 'IBM Plex Mono', monospace; color: rgba(255,255,255,0.7); font-size: 0.9rem; letter-spacing: 0.05em; position: relative; }
+        .results-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; margin-bottom: 24px; box-shadow: var(--shadow-sm); transition: border-color 0.2s, box-shadow 0.2s; }
+        .results-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+        .results-card h3 { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.25rem; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+        .section-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 8px; }
+
+        /* Gradient Bars */
+        .gradient-row { margin-bottom: 28px; }
+        .gradient-row:last-child { margin-bottom: 0; }
+        .gradient-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .gradient-label { font-family: 'IBM Plex Sans', sans-serif; font-weight: 600; font-size: 0.9rem; }
+        .gradient-value { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+        .gradient-row.spatial .gradient-label { color: var(--accent-spatial); }
+        .gradient-row.spatial .gradient-value { background: #ECFDF5; color: var(--accent-spatial); }
+        .gradient-row.temporal .gradient-label { color: var(--accent-temporal); }
+        .gradient-row.temporal .gradient-value { background: #FFFBEB; color: var(--accent-temporal); }
+        .gradient-row.reference .gradient-label { color: var(--accent-reference); }
+        .gradient-row.reference .gradient-value { background: #EFF6FF; color: var(--accent-reference); }
+        .gradient-track { height: 8px; background: var(--slate-100); border-radius: 4px; position: relative; margin-bottom: 8px; }
+        .gradient-marker {
+            position: absolute; top: 50%; transform: translate(-50%, -50%);
+            width: 20px; height: 20px; border-radius: 50%;
+            border: 3px solid var(--bg-card); transition: left 1s ease;
+            box-shadow: var(--shadow-sm);
+        }
+        .gradient-row.spatial .gradient-marker { background: var(--accent-spatial); }
+        .gradient-row.temporal .gradient-marker { background: var(--accent-temporal); }
+        .gradient-row.reference .gradient-marker { background: var(--accent-reference); }
+        .gradient-poles { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--text-muted); }
+
+        /* Profile Content */
+        .profile-description { line-height: 1.6; color: var(--text-secondary); font-size: 1rem; }
+        .profile-description p { margin-bottom: 16px; }
+        .profile-description p:last-child { margin-bottom: 0; }
+        .phrase-highlight {
+            background: var(--blue-50);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 12px; padding: 24px; margin: 20px 0; text-align: center;
+        }
+        .phrase-highlight p { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.1rem; font-style: italic; color: var(--text-primary); margin: 0; line-height: 1.6; }
+
+        /* Traits */
+        .trait-grid { display: grid; gap: 16px; }
+        .trait-item { display: flex; gap: 14px; padding: 16px; background: var(--bg-inset); border-radius: 12px; border: 1px solid var(--border); }
+        .trait-icon { font-size: 1.4rem; flex-shrink: 0; width: 32px; text-align: center; }
+        .trait-content h4 { font-family: 'IBM Plex Sans', sans-serif; font-size: 1rem; font-weight: 600; margin-bottom: 4px; color: var(--text-primary); }
+        .trait-content p { font-size: 0.95rem; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+
+        /* Challenge with remedy */
+        .challenge-item { padding: 20px; background: var(--bg-inset); border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--border); }
+        .challenge-item:last-child { margin-bottom: 0; }
+        .challenge-item h4 { font-family: 'IBM Plex Sans', sans-serif; font-size: 1rem; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+        .challenge-item .challenge-text { font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.6; }
+        .challenge-item .remedy { font-size: 0.9rem; color: var(--green-600); padding: 12px 16px; background: #ECFDF5; border-radius: 8px; border-left: 3px solid var(--green-600); }
+        .challenge-item .remedy strong { display: block; margin-bottom: 4px; color: var(--green-600); }
+
+        /* Learning and Communication sections */
+        .content-section { line-height: 1.6; color: var(--text-secondary); font-size: 1rem; }
+        .content-section p { margin-bottom: 16px; }
+        .content-section p:last-child { margin-bottom: 0; }
+
+        /* Locked Section */
+        .locked-section { position: relative; overflow: hidden; }
+        .locked-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, transparent 0%, var(--bg-card) 50%);
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; text-align: center; padding: 40px;
+        }
+        .locked-overlay .lock-icon { font-size: 2rem; margin-bottom: 16px; opacity: 0.7; }
+        .locked-overlay p { color: var(--text-secondary); margin-bottom: 16px; }
+        .locked-content { filter: blur(6px); opacity: 0.4; pointer-events: none; }
+        .locked-teaser { font-family: 'Source Serif 4', Georgia, serif; color: var(--text-primary); font-size: 1.1rem; margin-bottom: 8px; font-weight: 600; }
+
+        /* Energy patterns */
+        .energy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .energy-column h4 { font-family: 'IBM Plex Sans', sans-serif; font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .energy-column.energizes h4 { color: var(--green-600); }
+        .energy-column.drains h4 { color: var(--accent-symbolic); }
+        .energy-column ul { list-style: none; }
+        .energy-column li { font-size: 0.95rem; color: var(--text-secondary); padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .energy-column li:last-child { border-bottom: none; }
+
+        /* Work environments */
+        .environment-section { margin-bottom: 20px; }
+        .environment-section:last-child { margin-bottom: 0; }
+        .environment-section h4 { font-family: 'IBM Plex Sans', sans-serif; font-size: 0.9rem; font-weight: 600; margin-bottom: 10px; }
+        .environment-section.ideal h4 { color: var(--green-600); }
+        .environment-section.workable h4 { color: var(--amber-500); }
+        .environment-section.avoid h4 { color: var(--accent-symbolic); }
+        .environment-section p { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+
+        /* Block indicators table */
+        .block-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .block-table th { font-family: 'IBM Plex Mono', monospace; text-align: left; padding: 12px 8px; border-bottom: 2px solid var(--slate-300); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.65rem; }
+        .block-table td { padding: 12px 8px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+        .block-table tr:last-child td { border-bottom: none; }
+        .block-table .block-name { color: var(--text-primary); font-weight: 500; }
+        .block-table .strength-indicator { font-family: 'IBM Plex Mono', monospace; display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .block-table .strength-high { background: #ECFDF5; color: var(--green-600); }
+        .block-table .strength-medium { background: #FFFBEB; color: var(--amber-500); }
+        .block-table .strength-low { background: #FEF2F2; color: var(--accent-symbolic); }
+
+        /* Friction patterns */
+        .friction-item { padding: 16px; background: var(--bg-inset); border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); }
+        .friction-item:last-child { margin-bottom: 0; }
+        .friction-item h4 { font-family: 'IBM Plex Sans', sans-serif; font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+        .friction-item p { font-size: 0.95rem; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+
+        /* CTA */
+        .cta-card {
+            background: linear-gradient(175deg, #0C2340 0%, #1B3A5C 60%, #1E4D78 100%);
+            border: none; border-radius: 16px;
+            padding: 48px 40px; text-align: center; margin-top: 30px;
+            position: relative; overflow: hidden;
+        }
+        .cta-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at 20% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%); pointer-events: none; }
+        .cta-card h3 { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.5rem; margin-bottom: 12px; color: white; position: relative; }
+        .cta-card > p { color: rgba(255,255,255,0.82); margin-bottom: 24px; position: relative; }
+        .cta-card .price { font-size: 2.8rem; font-weight: 700; margin-bottom: 8px; color: white; position: relative; }
+        .cta-card .price span { font-size: 1rem; color: rgba(255,255,255,0.7); font-weight: 400; }
+        .cta-card .price-note { color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 24px; position: relative; }
+        .cta-card .btn-primary { background: white; color: #0C2340; }
+        .cta-card .btn-primary:hover { background: var(--slate-100); }
+        .features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; margin: 24px 0; position: relative; }
+        .feature-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; }
+        .feature-item .check { color: var(--amber-400); font-weight: bold; flex-shrink: 0; }
+        .feature-item span { font-size: 0.9rem; color: rgba(255,255,255,0.9); }
+
+        /* Footer */
+        footer { text-align: center; padding: 48px 20px; color: var(--text-muted); font-size: 0.85rem; background: var(--bg-inset); margin-top: 48px; border-top: 1px solid var(--border); }
+        footer a { color: var(--blue-500); text-decoration: none; font-weight: 500; }
+        footer a:hover { text-decoration: underline; }
+
+        /* Payment Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5); z-index: 1000;
+            display: none; align-items: center; justify-content: center;
+            padding: 20px; backdrop-filter: blur(4px);
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: var(--bg-card); border-radius: 16px;
+            max-width: 480px; width: 100%; padding: 40px;
+            border: 1px solid var(--border); position: relative;
+            box-shadow: var(--shadow-lg);
+        }
+        .modal-close {
+            position: absolute; top: 16px; right: 16px;
+            background: none; border: none; color: var(--text-muted);
+            font-size: 1.5rem; cursor: pointer; padding: 8px;
+            transition: color 0.2s;
+        }
+        .modal-close:hover { color: var(--text-primary); }
+        .modal-header { text-align: center; margin-bottom: 24px; }
+        .modal-header h3 { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.4rem; margin-bottom: 8px; color: var(--text-primary); }
+        .modal-header p { color: var(--text-secondary); font-size: 0.95rem; }
+        .modal-price { text-align: center; margin-bottom: 24px; }
+        .modal-price .amount { font-size: 2.5rem; font-weight: 700; color: var(--text-primary); }
+        .modal-price .currency { font-size: 1rem; color: var(--text-secondary); }
+        #card-container {
+            min-height: 90px; background: var(--bg-inset);
+            border-radius: 12px; padding: 16px; margin-bottom: 20px;
+        }
+        #card-button {
+            width: 100%; padding: 14px; background: var(--blue-500);
+            border: none; border-radius: 8px; color: white;
+            font-size: 1rem; font-weight: 600; cursor: pointer;
+            font-family: 'IBM Plex Sans', sans-serif; transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+        }
+        #card-button:hover { background: var(--blue-400); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        #card-button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        #payment-status { text-align: center; margin-top: 16px; font-size: 0.9rem; }
+        #payment-status.error { color: var(--accent-symbolic); }
+        #payment-status.success { color: var(--green-600); }
+        .secure-badge { text-align: center; margin-top: 16px; font-size: 0.8rem; color: var(--text-muted); }
+        .secure-badge span { margin-left: 6px; }
+
+        /* Stripe Card Element */
+        #card-element {
+            padding: 16px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        #card-element.StripeElement--focus {
+            border-color: var(--blue-500);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        #card-element.StripeElement--invalid {
+            border-color: var(--accent-symbolic);
+        }
+        #card-errors {
+            color: var(--accent-symbolic);
+            font-size: 0.85rem;
+            margin-top: 8px;
+            text-align: center;
+        }
+        #payment-form {
+            width: 100%;
+        }
+        /* Payment Request Button (Apple Pay / Google Pay) */
+        #payment-request-button {
+            margin-bottom: 16px;
+        }
+        #payment-request-button.hidden {
+            display: none;
+        }
+        .payment-divider {
+            display: flex;
+            align-items: center;
+            margin: 16px 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .payment-divider::before,
+        .payment-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--slate-300);
+        }
+        .payment-divider::before { margin-right: 12px; }
+        .payment-divider::after { margin-left: 12px; }
+        .payment-divider.hidden { display: none; }
+
+        /* Unlocked State */
+        .results-card.unlocked { position: relative; }
+        .results-card.unlocked .locked-overlay { display: none; }
+        .results-card.unlocked .locked-content { filter: none; opacity: 1; pointer-events: auto; }
+
+        /* Download Button */
+        .download-section {
+            background: var(--blue-50);
+            border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 16px;
+            padding: 30px; text-align: center; margin-bottom: 24px; display: none;
+        }
+        .download-section.visible { display: block; }
+        .download-section h3 { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.3rem; margin-bottom: 12px; color: var(--blue-500); }
+        .download-section p { color: var(--text-secondary); margin-bottom: 20px; }
+        .btn-download {
+            background: var(--blue-500);
+            color: white; border: none; padding: 14px 36px;
+            font-size: 1rem; font-weight: 600; border-radius: 8px;
+            cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+        }
+        .btn-download:hover { background: var(--blue-400); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+        /* Test mode banner */
+        .test-mode-banner {
+            background: #FFFBEB; border: 1px solid var(--amber-500);
+            border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.8rem; color: var(--amber-500); text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 16px; }
+            header { margin: 0 -16px 24px; padding: 12px 16px; }
+            .card { padding: 24px; }
+            .card h1 { font-size: 1.6rem; }
+            .question-text { font-size: 1.2rem; }
+            .profile-name { font-size: 2rem; }
+            .results-header { margin-left: -16px; margin-right: -16px; padding: 36px 20px; }
+            .prediction-text { font-size: 1.1rem; }
+            .btn-group { flex-direction: column; }
+            .btn-group .btn-primary, .btn-group .btn-secondary { width: 100%; }
+            .features-grid { grid-template-columns: 1fr; }
+            .answer-option { padding: 14px 16px; }
+            .answer-text { font-size: 0.95rem; }
+            .energy-grid { grid-template-columns: 1fr; }
+            .cta-card { padding: 36px 24px; margin-left: -16px; margin-right: -16px; border-radius: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mesh-bg"></div>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <div class="logo">Parser <span>Profile</span>™</div>
+                <div class="tagline">Developed by J.D. Mercer</div>
+            </div>
+            <div class="header-right">
+                <a href="/parent-login.html" class="explore-link">Kids Assessment</a>
+                <a href="https://cognitionblocksllc.com/the-cognition-block/" class="explore-link" target="_blank">Explore CBI →</a>
+            </div>
+        </header>
+
+        <div class="progress-container" id="progressContainer" style="display: none;">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-text">
+                <span id="progressLabel">Question 1 of 15</span>
+                <span id="progressPercent">0%</span>
+            </div>
+        </div>
+
+        <!-- INTRO -->
+        <div class="screen active" id="introScreen">
+            <div class="card centered">
+                <h1>Parser Profile™ Assessment</h1>
+                <p style="font-family: 'Fraunces', serif; font-size: 1.3rem; color: var(--text-primary); margin-bottom: 12px;">Right now, your brain is doing something remarkable.</p>
+                <p>It's not just existing in space and time—it's <em style="color: var(--accent-spatial);">parsing</em> reality through three cognitive systems that determine what you notice, how you think, and why some things click instantly while others feel like work.</p>
+                <div class="dimensions-preview">
+                    <div class="dimension-item spatial">
+                        <div class="icon">◈</div>
+                        <div class="label">Spatial</div>
+                        <div class="dimension-desc">Concrete ↔ Abstract</div>
+                    </div>
+                    <div class="dimension-item temporal">
+                        <div class="icon">◷</div>
+                        <div class="label">Temporal</div>
+                        <div class="dimension-desc">Past ↔ Future</div>
+                    </div>
+                    <div class="dimension-item reference">
+                        <div class="icon">◉</div>
+                        <div class="label">Reference</div>
+                        <div class="dimension-desc">Self ↔ Other</div>
+                    </div>
+                </div>
+                <p style="font-size: 0.95rem;">Two people can look at the same situation and experience completely different realities—not because one is smarter, but because their brains <strong style="color: var(--accent-temporal);">filter reality differently</strong>.</p>
+                <p style="font-family: 'Fraunces', serif; font-size: 1.15rem; color: var(--text-primary); margin-bottom: 8px;">Discover your unique cognitive signature.</p>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 24px;">15 questions • 5 minutes • Free results</p>
+                <button class="btn-primary" onclick="startAssessment()">Begin Assessment</button>
+            </div>
+        </div>
+
+        <!-- QUESTIONS -->
+        <div class="screen" id="questionScreen">
+            <div class="question-container">
+                <div class="question-phase" id="questionPhase">Calibration · Question 1 of 3</div>
+                <span class="question-badge" id="questionBadge">Spatial</span>
+                <h2 class="question-text" id="questionText">Loading...</h2>
+                <div class="answer-options" id="answerOptions"></div>
+            </div>
+            <div class="nav-buttons">
+                <button class="btn-nav prev" id="prevBtn" onclick="prevQuestion()" disabled>← Previous</button>
+                <button class="btn-nav next" id="nextBtn" onclick="nextQuestion()" disabled>Next →</button>
+            </div>
+        </div>
+
+        <!-- PREDICTION -->
+        <div class="screen" id="predictionScreen">
+            <div class="card prediction-card">
+                <div class="prediction-icon">👁️</div>
+                <p class="prediction-text" id="predictionText">"You probably skim instructions and figure it out as you go."</p>
+                <div class="prediction-check">
+                    <p><strong>If that landed</strong>, your answers were thoughtful—keep going.</p>
+                    <p><strong>If it missed</strong>, consider whether you answered for who you <em>are,</em> or, who you're <em>striving to be</em>.</p>
+                    <p style="margin-top: 16px; font-size: 0.9rem;">Your actual profile reveals a path.<br>Your desired profile assumes you're at the end of it.</p>
+                </div>
+                <div style="margin-top: 24px; padding: 20px; background: var(--accent-temporal-dim); border: 1px solid rgba(255, 200, 87, 0.3); border-radius: 12px; text-align: center;">
+                    <p style="font-weight: 700; color: var(--accent-temporal); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em;">⚠️ Please Read All Selections</p>
+                </div>
+                <div class="btn-group" style="margin-top: 24px;">
+                    <button class="btn-primary" onclick="continuePastPrediction()">That Landed — Continue</button>
+                    <button class="btn-secondary" onclick="redoCalibration()">Start Over</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- EMAIL -->
+        <div class="screen" id="emailScreen">
+            <div class="card centered">
+                <h2>One Last Step</h2>
+                <p>See your FREE results and receive a copy and your unique Customer ID.</p>
+
+                <div class="life-stage-select" style="margin-bottom: 20px;">
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px;">Select your life stage for personalized results:</p>
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <label style="flex: 1; max-width: 160px; cursor: pointer;">
+                            <input type="radio" name="lifeStage" value="early" style="display: none;">
+                            <div class="life-stage-option" style="padding: 16px 12px; border: 2px solid var(--text-muted); border-radius: 10px; text-align: center; transition: all 0.2s;">
+                                <div style="font-weight: 600; margin-bottom: 4px;">Early Career</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">18 – 29</div>
+                            </div>
+                        </label>
+                        <label style="flex: 1; max-width: 160px; cursor: pointer;">
+                            <input type="radio" name="lifeStage" value="established" checked style="display: none;">
+                            <div class="life-stage-option selected" style="padding: 16px 12px; border: 2px solid var(--accent-spatial); border-radius: 10px; text-align: center; transition: all 0.2s; background: var(--accent-spatial-dim);">
+                                <div style="font-weight: 600; margin-bottom: 4px;">Established</div>
+                                <div style="font-size: 0.8rem; color: var(--text-muted);">30+</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <input type="text" id="nameInput" placeholder="Your name (optional)" style="margin-bottom: 12px;">
+                </div>
+                <div class="input-group">
+                    <input type="email" id="emailInput" placeholder="your@email.com">
+                </div>
+                <button class="btn-primary" onclick="submitEmailAndShowResults()">Email My Results</button>
+                <span class="skip-link" onclick="showResults(true, getSelectedLifeStage())">Skip — just show results</span>
+            </div>
+        </div>
+
+        <!-- RESULTS -->
+        <div class="screen" id="resultsScreen">
+            <div class="results-header">
+                <div class="subtitle">Your Parser Profile™</div>
+                <h1 class="profile-name" id="profileName">Visionary</h1>
+                <div id="customerIdDisplay" style="display: none; margin-top: 16px; padding: 12px 24px; background: var(--accent-spatial-dim); border: 1px solid rgba(0, 212, 170, 0.3); border-radius: 8px;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Your Customer ID</span>
+                    <span id="customerIdValue" style="font-weight: 700; letter-spacing: 0.05em; color: var(--accent-spatial);"></span>
+                </div>
+            </div>
+
+            <!-- Download Section (shown after purchase) -->
+            <div class="download-section" id="downloadSection">
+                <h3>🎉 Full Report Unlocked!</h3>
+                <p>Your complete Parser Profile™ is now available. Download your personalized PDF report.</p>
+                <button class="btn-download" onclick="downloadPDF()">📄 Download Full Report (PDF)</button>
+            </div>
+
+            <!-- Dimension Scores -->
+            <div class="results-card">
+                <div class="section-label">Your Cognitive Coordinates</div>
+                <h3>📊 Dimension Scores</h3>
+                <div class="gradient-row spatial">
+                    <div class="gradient-header">
+                        <span class="gradient-label">Spatial Processing</span>
+                        <span class="gradient-value" id="spatialValue">72% Abstract</span>
+                    </div>
+                    <p style="margin: 0 0 8px 0; font-size: 0.8rem; color: var(--text-muted);">How you organize and interpret information — from hands-on and detail-oriented (Concrete) to big-picture and conceptual (Abstract).</p>
+                    <div class="gradient-track"><div class="gradient-marker" id="spatialMarker" style="left: 50%"></div></div>
+                    <div class="gradient-poles"><span>Concrete</span><span>Abstract</span></div>
+                </div>
+                <div class="gradient-row temporal">
+                    <div class="gradient-header">
+                        <span class="gradient-label">Temporal Processing</span>
+                        <span class="gradient-value" id="temporalValue">65% Future</span>
+                    </div>
+                    <p style="margin: 0 0 8px 0; font-size: 0.8rem; color: var(--text-muted);">Where your mind naturally anchors in time — drawing from experience and precedent (Past) or anticipating what's next (Future).</p>
+                    <div class="gradient-track"><div class="gradient-marker" id="temporalMarker" style="left: 50%"></div></div>
+                    <div class="gradient-poles"><span>Past</span><span>Future</span></div>
+                </div>
+                <div class="gradient-row reference">
+                    <div class="gradient-header">
+                        <span class="gradient-label">Reference Processing</span>
+                        <span class="gradient-value" id="referenceValue">58% Self</span>
+                    </div>
+                    <p style="margin: 0 0 8px 0; font-size: 0.8rem; color: var(--text-muted);">How you make decisions and evaluate situations — guided by others' needs and perspectives (Other) or by your own internal compass (Self).</p>
+                    <div class="gradient-track"><div class="gradient-marker" id="referenceMarker" style="left: 50%"></div></div>
+                    <div class="gradient-poles"><span>Other</span><span>Self</span></div>
+                </div>
+            </div>
+
+            <!-- FREE TIER: Profile Overview -->
+            <div class="results-card">
+                <div class="section-label">Who You Are</div>
+                <h3>🔮 Your Profile</h3>
+                <div class="profile-description" id="profileDescription"></div>
+            </div>
+
+            <!-- FREE TIER: The Phrase -->
+            <div class="results-card">
+                <div class="section-label">The Phrase That Hits Home</div>
+                <div class="phrase-highlight">
+                    <p id="phraseContent">"Your phrase will appear here."</p>
+                </div>
+            </div>
+
+            <!-- FREE TIER: Cognitive Strengths (6) -->
+            <div class="results-card">
+                <div class="section-label">What Comes Naturally</div>
+                <h3>⚡ Your Cognitive Strengths</h3>
+                <div class="trait-grid" id="strengthsGrid"></div>
+            </div>
+
+            <!-- FREE TIER: How You Learn -->
+            <div class="results-card">
+                <div class="section-label">Your Learning Style</div>
+                <h3>📚 How You Learn Best</h3>
+                <div class="content-section" id="howYouLearnContent"></div>
+            </div>
+
+            <!-- FREE TIER: How You Communicate -->
+            <div class="results-card">
+                <div class="section-label">Your Communication Style</div>
+                <h3>💬 How You Communicate</h3>
+                <div class="content-section" id="howYouCommunicateContent"></div>
+            </div>
+
+            <!-- FREE TIER: 1 Challenge with Remedy -->
+            <div class="results-card">
+                <div class="section-label">Growth Edge</div>
+                <h3>🎯 Your Primary Challenge</h3>
+                <div id="primaryChallengeContent"></div>
+            </div>
+
+            <!-- PAID TIER LOCKED: The Secret -->
+            <div class="results-card locked-section">
+                <div class="locked-content" id="secretPreview">
+                    <h3>🤫 The Secret You've Carried</h3>
+                    <div class="content-section">
+                        <p>There's something you've known about yourself for years—maybe decades—that you've never quite been able to name or explain to others...</p>
+                        <p style="color: var(--accent-spatial); font-style: italic; margin-top: 12px;">Continue reading in your full Parser Profile™...</p>
+                    </div>
+                </div>
+                <div class="locked-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <p class="locked-teaser">The Secret You've Carried</p>
+                    <p>Finally name what you've always known about yourself.</p>
+                    <button class="btn-secondary" onclick="scrollToCTA()">Unlock Full Report</button>
+                </div>
+            </div>
+
+            <!-- PAID TIER LOCKED: All 6 Challenges -->
+            <div class="results-card locked-section">
+                <div class="locked-content">
+                    <h3>🎯 All 6 Natural Challenges</h3>
+                    <div class="challenge-item">
+                        <h4>Challenge with detailed remedy...</h4>
+                        <p class="challenge-text">Full challenge description with specific remedy...</p>
+                    </div>
+                    <div class="challenge-item">
+                        <h4>Another challenge...</h4>
+                        <p class="challenge-text">Additional challenges and remedies...</p>
+                    </div>
+                </div>
+                <div class="locked-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <p class="locked-teaser">All 6 Challenges + Remedies</p>
+                    <p>Get the complete picture of your growth edges with actionable remedies.</p>
+                    <button class="btn-secondary" onclick="scrollToCTA()">Unlock Full Report</button>
+                </div>
+            </div>
+
+            <!-- PAID TIER LOCKED: What Others Get Wrong -->
+            <div class="results-card locked-section">
+                <div class="locked-content">
+                    <h3>🎭 What Others Get Wrong About You</h3>
+                    <div class="content-section">
+                        <p>People consistently misread something fundamental about you...</p>
+                        <p>This section validates what you've always felt but couldn't prove...</p>
+                    </div>
+                </div>
+                <div class="locked-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <p class="locked-teaser">What Others Get Wrong About You</p>
+                    <p>Validation for what you've always felt but couldn't explain.</p>
+                    <button class="btn-secondary" onclick="scrollToCTA()">Unlock Full Report</button>
+                </div>
+            </div>
+
+            <!-- PAID TIER LOCKED: Hidden Superpower -->
+            <div class="results-card locked-section">
+                <div class="locked-content">
+                    <h3>✨ Your Hidden Superpower</h3>
+                    <div class="content-section">
+                        <p>There's something you do that others genuinely cannot...</p>
+                        <p>This ability comes so naturally you might not even recognize it as special...</p>
+                    </div>
+                </div>
+                <div class="locked-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <p class="locked-teaser">Your Hidden Superpower</p>
+                    <p>Discover what you do that others simply cannot.</p>
+                    <button class="btn-secondary" onclick="scrollToCTA()">Unlock Full Report</button>
+                </div>
+            </div>
+
+            <!-- PAID TIER LOCKED: Blind Spot -->
+            <div class="results-card locked-section">
+                <div class="locked-content">
+                    <h3>👁️ Your Blind Spot</h3>
+                    <div class="content-section">
+                        <p>There's something your cognitive architecture makes nearly impossible to see on your own...</p>
+                        <p>This isn't a flaw—it's the natural shadow of your strengths...</p>
+                    </div>
+                </div>
+                <div class="locked-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <p class="locked-teaser">Your Blind Spot</p>
+                    <p>See what your mind can't see on its own.</p>
+                    <button class="btn-secondary" onclick="scrollToCTA()">Unlock Full Report</button>
+                </div>
+            </div>
+
+            <!-- PAID TIER LOCKED: Friction Patterns -->
+            <div class="results-card locked-section">
+                <div class="locked-content">
+                    <h3>⚡ Friction Patterns</h3>
+                    <div class="friction-item">
+                        <h4>Profile Type You Clash With</h4>
+                        <p>Why this specific cognitive pattern creates friction with yours...</p>
+                    </div>
+                </div>
+                <div class="locked-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <p class="locked-teaser">Friction Patterns</p>
+                    <p>Understand who you clash with and why.</p>
+                    <button class="btn-secondary" onclick="scrollToCTA()">Unlock Full Report</button>
+                </div>
+            </div>
+
+            <!-- PAID TIER LOCKED: Energy Patterns -->
+            <div class="results-card locked-section">
+                <div class="locked-content">
+                    <h3>🔋 What Energizes vs. Drains You</h3>
+                    <div class="energy-grid">
+                        <div class="energy-column energizes">
+                            <h4>⚡ Energizes</h4>
+                            <ul><li>Activity that fills your tank...</li><li>Another energizing pattern...</li></ul>
+                        </div>
+                        <div class="energy-column drains">
+                            <h4>🔌 Drains</h4>
+                            <ul><li>Activity that depletes you...</li><li>Another draining pattern...</li></ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="locked-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <p class="locked-teaser">Energy Patterns</p>
+                    <p>Learn what fills your tank and what drains it.</p>
+                    <button class="btn-secondary" onclick="scrollToCTA()">Unlock Full Report</button>
+                </div>
+            </div>
+
+            <!-- PAID TIER LOCKED: Work Environments -->
+            <div class="results-card locked-section">
+                <div class="locked-content">
+                    <h3>🏢 Optimal Work Environments</h3>
+                    <div class="environment-section ideal">
+                        <h4>✓ Ideal</h4>
+                        <p>Environment description...</p>
+                    </div>
+                    <div class="environment-section workable">
+                        <h4>~ Workable</h4>
+                        <p>Environment description...</p>
+                    </div>
+                    <div class="environment-section avoid">
+                        <h4>✗ Avoid</h4>
+                        <p>Environment description...</p>
+                    </div>
+                </div>
+                <div class="locked-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <p class="locked-teaser">Optimal Work Environments</p>
+                    <p>Find where you'll thrive vs. struggle.</p>
+                    <button class="btn-secondary" onclick="scrollToCTA()">Unlock Full Report</button>
+                </div>
+            </div>
+
+            <!-- PAID TIER LOCKED: Block Indicators -->
+            <div class="results-card locked-section">
+                <div class="locked-content">
+                    <h3>🧱 Block Strength Indicators</h3>
+                    <table class="block-table">
+                        <thead><tr><th>Block</th><th>Strength</th><th>Integration</th></tr></thead>
+                        <tbody>
+                            <tr><td class="block-name">Block Name</td><td><span class="strength-indicator strength-high">High</span></td><td>Integration note...</td></tr>
+                            <tr><td class="block-name">Another Block</td><td><span class="strength-indicator strength-medium">Medium</span></td><td>Integration note...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="locked-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <p class="locked-teaser">8-Block Integration Table</p>
+                    <p>See how your cognitive blocks work together.</p>
+                    <button class="btn-secondary" onclick="scrollToCTA()">Unlock Full Report</button>
+                </div>
+            </div>
+
+            <!-- CTA -->
+            <div class="cta-card" id="ctaCard">
+                <h3>Unlock Your Complete Profile</h3>
+                <p>You've seen your architecture. Now see what you can't see yourself.</p>
+                <div class="features-grid">
+                    <div class="feature-item"><span class="check">✓</span><span>The Secret You've Carried</span></div>
+                    <div class="feature-item"><span class="check">✓</span><span>What Others Get Wrong</span></div>
+                    <div class="feature-item"><span class="check">✓</span><span>Your Hidden Superpower</span></div>
+                    <div class="feature-item"><span class="check">✓</span><span>Your Blind Spot</span></div>
+                    <div class="feature-item"><span class="check">✓</span><span>All 6 Challenges + Remedies</span></div>
+                    <div class="feature-item"><span class="check">✓</span><span>Friction Patterns</span></div>
+                    <div class="feature-item"><span class="check">✓</span><span>Energy Patterns</span></div>
+                    <div class="feature-item"><span class="check">✓</span><span>Optimal Environments</span></div>
+                </div>
+                <div class="price">$49.99 <span>USD</span></div>
+                <div class="price-note">One-time purchase • Instant access </div>
+                <button class="btn-primary" style="width: 100%; max-width: 300px;" onclick="openPaymentModal()">Get Full Report</button>
+            </div>
+        </div>
+
+        <!-- Payment Modal -->
+        <div class="modal-overlay" id="paymentModal">
+            <div class="modal-content">
+                <button class="modal-close" onclick="closePaymentModal()">×</button>
+                <div class="modal-header">
+                    <h3>Complete Your Purchase</h3>
+                    <p>Unlock your full Parser Profile™ report</p>
+                </div>
+                <div class="modal-price">
+                    <span class="amount" id="display-price">$49.99</span>
+                    <span class="currency">USD</span>
+                    <div id="discount-badge" style="display: none; margin-top: 8px; font-size: 0.8rem; color: var(--accent-spatial); background: var(--accent-spatial-dim); padding: 4px 12px; border-radius: 12px; display: inline-block;"></div>
+                </div>
+                <div id="promo-section" style="margin-bottom: 16px;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" id="promoInput" placeholder="Promo code" style="flex: 1; padding: 10px 14px; background: var(--bg-primary); border: 1px solid var(--text-muted); border-radius: 8px; color: var(--text-primary); font-size: 0.9rem; font-family: inherit;">
+                        <button type="button" id="applyPromoBtn" onclick="applyPromoCode()" style="padding: 10px 18px; background: var(--bg-card); border: 1px solid var(--text-muted); border-radius: 8px; color: var(--text-primary); cursor: pointer; font-size: 0.9rem; font-family: inherit;">Apply</button>
+                    </div>
+                    <div id="promo-status" style="font-size: 0.8rem; margin-top: 6px;"></div>
+                </div>
+                <form id="payment-form">
+                    <div id="payment-request-button" class="hidden"></div>
+                    <div id="payment-divider" class="payment-divider hidden">or pay with card</div>
+                    <div id="card-element"></div>
+                    <div id="card-errors" role="alert"></div>
+                    <button type="submit" id="card-button" class="btn-primary" style="width: 100%; margin-top: 16px;">
+                        Pay $49.99
+                    </button>
+                </form>
+                <div id="payment-status"></div>
+                <div class="secure-badge">🔒<span>Secured by Stripe</span></div>
+            </div>
+        </div>
+
+        <footer>
+            <a href="https://cognitionblocksllc.com/the-cognition-block/" class="explore-cta" target="_blank">Explore CBI</a>
+            <p>Parser Profile™ developed by J.D. Mercer</p>
+            <p style="margin-top: 4px; font-size: 0.75rem;">Based on the Cognition Blocks Intelligence (CBI) Framework</p>
+            <p style="margin-top: 12px;">© 2026 Cognition Blocks LLC. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script type="module">
+        // ============================================================================
+        // IMPORT PROFILES
+        // ============================================================================
+
+        console.log('Parser Assessment: Loading module...');
+
+        import { profiles, getProfileByName } from './index.js';
+
+        console.log('Parser Assessment: Profiles loaded successfully. Count:', Object.keys(profiles).length);
+
+        // ============================================================================
+        // COPY PROTECTION
+        // ============================================================================
+
+        // Disable right-click context menu
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Disable copy keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 'a' || e.key === 'A' || e.key === 'u' || e.key === 'U')) {
+                // Allow in input/textarea fields
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                e.preventDefault();
+            }
+        });
+
+        // ============================================================================
+        // THEME MANAGEMENT (Light mode only)
+        // ============================================================================
+
+        // Light mode is now the only theme - no dark mode support
+
+        // ============================================================================
+        // QUESTIONS DATA
+        // ============================================================================
+
+const questions = [
+            // DDCoT CALIBRATION (Q1-3)
+            {
+                id: 'ddcot_spatial',
+                dimension: 'spatial',
+                phase: 'calibration',
+                text: 'When you\'re taking on something you\'ve never done before, where do you naturally start?',
+                poleDirection: 'abstract-to-concrete',
+                options: [
+                    { letter: 'A', text: 'I look for the concept or principle behind it — I\'ll figure out the specifics from there', value: 5 },
+                    { letter: 'B', text: 'I get a sense of the overall idea first, then refer to the steps as I need them', value: 4 },
+                    { letter: 'C', text: 'I switch between trying to understand the concept and following the steps — I need both and can\'t fully commit to either', value: 3 },
+                    { letter: 'D', text: 'I follow the steps, but I want to understand why each one matters as I go', value: 2 },
+                    { letter: 'E', text: 'I go step by step, in order — doing it correctly matters more to me than knowing why', value: 1 }
+                ]
+            },
+            {
+                id: 'ddcot_temporal',
+                dimension: 'temporal',
+                phase: 'calibration',
+                text: 'When a problem lands in front of you, where does your mind go first?',
+                poleDirection: 'past-to-future',
+                options: [
+                    { letter: 'A', text: 'What has worked in situations like this before', value: 1 },
+                    { letter: 'B', text: 'What\'s worked before, though I\'m open to a different approach if needed', value: 2 },
+                    { letter: 'C', text: 'Past experience and new possibilities arrive at the same time — I find myself weighing both before I can move forward', value: 3 },
+                    { letter: 'D', text: 'What new approaches might work, though I check them against what\'s worked before', value: 4 },
+                    { letter: 'E', text: 'What fresh approaches could work — starting from what\'s been done before feels limiting', value: 5 }
+                ]
+            },
+            {
+                id: 'ddcot_reference',
+                dimension: 'reference',
+                phase: 'calibration',
+                text: 'When you hear about a major change coming to your workplace or community, what\'s your first thought?',
+                poleDirection: 'self-to-other',
+                options: [
+                    { letter: 'A', text: 'How this will personally affect me', value: 5 },
+                    { letter: 'B', text: 'How it affects me — though I do think about the broader impact', value: 4 },
+                    { letter: 'C', text: 'My own situation and everyone else\'s arrive at the same time — I can\'t think about one without the other surfacing', value: 3 },
+                    { letter: 'D', text: 'How it affects everyone around me — though I work back to what it means for me', value: 2 },
+                    { letter: 'E', text: 'How it will affect the people around me — my own situation barely registers at first', value: 1 }
+                ]
+            },
+
+            // MAIN ASSESSMENT (Q4-15)
+            // SPATIAL QUESTIONS
+            {
+                id: 'spatial_2',
+                dimension: 'spatial',
+                phase: 'assessment',
+                text: 'You\'re assembling something with written instructions. What\'s your natural approach?',
+                poleDirection: 'abstract-to-concrete',
+                options: [
+                    { letter: 'A', text: 'I scan to understand the overall goal, then figure out the details as I go', value: 5 },
+                    { letter: 'B', text: 'I get a sense of the big picture first, then loosely reference the steps', value: 4 },
+                    { letter: 'C', text: 'I find myself reading ahead to understand the goal AND tracking the current step — I can\'t fully commit to either mode', value: 3 },
+                    { letter: 'D', text: 'I follow the steps, but I\'m building an understanding of where it\'s heading as I go', value: 2 },
+                    { letter: 'E', text: 'I follow each step in order, one at a time, without looking ahead', value: 1 }
+                ]
+            },
+            {
+                id: 'spatial_3',
+                dimension: 'spatial',
+                phase: 'assessment',
+                text: 'A friend comes to you with a problem. What do you naturally offer first?',
+                poleDirection: 'concrete-to-abstract',
+                options: [
+                    { letter: 'A', text: 'Specific actions they could take right now', value: 1 },
+                    { letter: 'B', text: 'Concrete suggestions, with some explanation of why they might help', value: 2 },
+                    { letter: 'C', text: 'I notice I\'m offering steps and reframes almost simultaneously — the conversation moves in both directions without me planning it', value: 3 },
+                    { letter: 'D', text: 'A different way of looking at the situation, with some practical implications', value: 4 },
+                    { letter: 'E', text: 'A reframe — I want them to see it differently before we talk about what to do', value: 5 }
+                ]
+            },
+            {
+                id: 'spatial_4',
+                dimension: 'spatial',
+                phase: 'assessment',
+                text: 'When you recall a meaningful experience, what comes back most vividly?',
+                poleDirection: 'concrete-to-abstract',
+                options: [
+                    { letter: 'A', text: 'Specific sensory details — what I saw, heard, smelled, felt physically', value: 1 },
+                    { letter: 'B', text: 'Specific moments, with some sense of what they meant', value: 2 },
+                    { letter: 'C', text: 'The details and the significance arrive together — I can\'t access one without the other', value: 3 },
+                    { letter: 'D', text: 'The overall meaning, with fragments of the specific moments', value: 4 },
+                    { letter: 'E', text: 'The feeling or significance of it — what it meant, more than what happened', value: 5 }
+                ]
+            },
+            {
+                id: 'spatial_5',
+                dimension: 'spatial',
+                phase: 'assessment',
+                text: 'What frustrates you most when learning something new?',
+                poleDirection: 'concrete-to-abstract',
+                options: [
+                    { letter: 'A', text: 'Being given abstract principles without anything concrete to anchor them to', value: 1 },
+                    { letter: 'B', text: 'Too much theory before I\'ve seen it in action — I can tolerate some, but not much', value: 2 },
+                    { letter: 'C', text: 'I feel stuck but can\'t tell what\'s missing — I can\'t determine if it\'s the concept or the example I need', value: 3 },
+                    { letter: 'D', text: 'Too much detail before I understand the point — I can push through it, but it slows me down', value: 4 },
+                    { letter: 'E', text: 'Being walked through steps without understanding the logic behind them', value: 5 }
+                ]
+            },
+
+            // TEMPORAL QUESTIONS
+            {
+                id: 'temporal_2',
+                dimension: 'temporal',
+                phase: 'assessment',
+                text: 'After a project doesn\'t go as planned, where does your mind naturally go first?',
+                poleDirection: 'future-to-past',
+                options: [
+                    { letter: 'A', text: 'What I\'ll do differently next time', value: 5 },
+                    { letter: 'B', text: 'What\'s next — though I process what went wrong to inform it', value: 4 },
+                    { letter: 'C', text: 'Both at once — I\'m analyzing what happened and thinking about what\'s next simultaneously, which makes it hard to do either well', value: 3 },
+                    { letter: 'D', text: 'What went wrong — though I move toward next steps once I\'ve worked through it', value: 2 },
+                    { letter: 'E', text: 'What went wrong and why — I need to understand it fully before I can think about what\'s next', value: 1 }
+                ]
+            },
+            {
+                id: 'temporal_3',
+                dimension: 'temporal',
+                phase: 'assessment',
+                text: 'When planning something you\'re looking forward to, what energizes you most?',
+                poleDirection: 'past-to-future',
+                options: [
+                    { letter: 'A', text: 'Reviewing what worked last time and building from there', value: 1 },
+                    { letter: 'B', text: 'Drawing on proven approaches, while leaving room to try a few new things', value: 2 },
+                    { letter: 'C', text: 'I find myself doing both at once — reviewing what\'s worked and imagining what could be — and neither feels complete without the other', value: 3 },
+                    { letter: 'D', text: 'Imagining the possibilities, while using past experience as a check', value: 4 },
+                    { letter: 'E', text: 'Imagining what it could be — I\'d rather start fresh than repeat what\'s been done', value: 5 }
+                ]
+            },
+            {
+                id: 'temporal_4',
+                dimension: 'temporal',
+                phase: 'assessment',
+                text: 'In conversations with close friends, what do you find yourself bringing up most?',
+                poleDirection: 'past-to-future',
+                options: [
+                    { letter: 'A', text: 'Shared memories and things you\'ve been through together', value: 1 },
+                    { letter: 'B', text: 'Mostly what you\'ve experienced together, with some talk about what\'s coming', value: 2 },
+                    { letter: 'C', text: 'I move between past and future in the same conversation — a memory leads to a plan, a plan leads back to a memory', value: 3 },
+                    { letter: 'D', text: 'Mostly what\'s coming up, with the occasional reference to shared history', value: 4 },
+                    { letter: 'E', text: 'Plans, possibilities, and what you\'re both looking forward to', value: 5 }
+                ]
+            },
+            {
+                id: 'temporal_5',
+                dimension: 'temporal',
+                phase: 'assessment',
+                text: 'When do you feel most confident about a decision?',
+                poleDirection: 'future-to-past',
+                options: [
+                    { letter: 'A', text: 'When I can picture multiple ways it could play out well', value: 5 },
+                    { letter: 'B', text: 'When the direction feels promising, even without a proven roadmap', value: 4 },
+                    { letter: 'C', text: 'When I can see it fits the pattern of what\'s worked before AND points somewhere worth going — without both, something feels off', value: 3 },
+                    { letter: 'D', text: 'When it\'s grounded in a track record, even if the outcome isn\'t certain', value: 2 },
+                    { letter: 'E', text: 'When I have clear evidence this approach has worked in similar situations before', value: 1 }
+                ]
+            },
+
+            // REFERENCE QUESTIONS
+            {
+                id: 'reference_2',
+                dimension: 'reference',
+                phase: 'assessment',
+                text: 'After a meaningful conversation, what do you find yourself replaying?',
+                poleDirection: 'self-to-other',
+                options: [
+                    { letter: 'A', text: 'What I said, how I came across, and whether I expressed myself the way I intended', value: 5 },
+                    { letter: 'B', text: 'My contributions mostly — though I wonder how they landed on the other person', value: 4 },
+                    { letter: 'C', text: 'I replay it from my perspective, then try to see it from theirs — and neither view feels like the whole picture', value: 3 },
+                    { letter: 'D', text: 'How the other person seemed to experience it, with some reflection on my own role', value: 2 },
+                    { letter: 'E', text: 'What the other person seemed to feel or take away from it', value: 1 }
+                ]
+            },
+            {
+                id: 'reference_3',
+                dimension: 'reference',
+                phase: 'assessment',
+                text: 'When making a choice that affects both you and others, where do you naturally start?',
+                poleDirection: 'other-to-self',
+                options: [
+                    { letter: 'A', text: 'What the people involved actually need', value: 1 },
+                    { letter: 'B', text: 'Others\' needs first, then working back to my own', value: 2 },
+                    { letter: 'C', text: 'My needs and others\' arrive at the same time — there\'s no natural sequence, which sometimes makes it harder to decide, not easier', value: 3 },
+                    { letter: 'D', text: 'What I need and want, then considering how that works for others', value: 4 },
+                    { letter: 'E', text: 'What I actually want — I find it hard to think about others\' needs until I know my own', value: 5 }
+                ]
+            },
+            {
+                id: 'reference_4',
+                dimension: 'reference',
+                phase: 'assessment',
+                text: 'When you\'ve done good work, what matters most for your sense of satisfaction?',
+                poleDirection: 'other-to-self',
+                options: [
+                    { letter: 'A', text: 'Knowing others recognized and valued it', value: 1 },
+                    { letter: 'B', text: 'Positive feedback from others — my own sense of it matters, but theirs confirms it', value: 2 },
+                    { letter: 'C', text: 'Both need to line up — if I feel good about it but no one else does, or the reverse, the satisfaction feels incomplete', value: 3 },
+                    { letter: 'D', text: 'My own judgment of the quality — though it\'s nice when others see it too', value: 4 },
+                    { letter: 'E', text: 'My own assessment — I know when something is good, regardless of what others say', value: 5 }
+                ]
+            },
+            {
+                id: 'reference_5',
+                dimension: 'reference',
+                phase: 'assessment',
+                text: 'In a group working on a task, what do you naturally track most closely?',
+                poleDirection: 'self-to-other',
+                options: [
+                    { letter: 'A', text: 'Whether I\'m pulling my weight and contributing effectively', value: 5 },
+                    { letter: 'B', text: 'How I\'m contributing, with background awareness of how the group is doing overall', value: 4 },
+                    { letter: 'C', text: 'I\'m monitoring both simultaneously — my own contribution and the group dynamic — which means I\'m never fully focused on either', value: 3 },
+                    { letter: 'D', text: 'How the group is functioning overall, while staying aware of my own role', value: 2 },
+                    { letter: 'E', text: 'Whether the group is aligned and working well together as a whole', value: 1 }
+                ]
+            }
+        ];
+
+        // ============================================================================
+        // PREDICTIONS
+        // ============================================================================
+
+        const predictions = {
+            'concrete-past-self': "You probably know exactly where you put things—and get frustrated when others move them.",
+            'concrete-past-balanced': "You probably have a 'right way' to do most things—not because you're rigid, but because you've tested alternatives.",
+            'concrete-past-other': "You probably remember who helped build things long after everyone else has forgotten their names.",
+            'concrete-present-self': "You probably know when something's wrong with your body before any test would catch it.",
+            'concrete-present-balanced': "You probably get frustrated when people overcomplicate things that are actually simple.",
+            'concrete-present-other': "You probably notice when someone's energy shifts before they've said a word.",
+            'concrete-future-self': "You probably have a plan for something in advance—and don't wait until the last minute to make preparations.",
+            'concrete-future-balanced': "You probably run scenarios in your head—not anxiously, but practically. You want to be ready.",
+            'concrete-future-other': "You probably remember what you promised people long after they've forgotten they asked.",
+            'balanced-past-self': "You probably learn more from reflecting on your own experience than from any book or course.",
+            'balanced-past-balanced': "You probably see how things connect to what came before—even when others don't notice the thread.",
+            'balanced-past-other': "You probably remember group histories—who contributed what, how decisions were made.",
+            'balanced-present-self': "You probably know what you need to function, and you've learned to provide it for yourself.",
+            'balanced-present-balanced': "You've probably been called 'calm' and 'even-keeled' more times than you can count.",
+            'balanced-present-other': "You probably notice when the group mood shifts before anyone acknowledges it.",
+            'balanced-future-self': "You probably have a vision of who you're becoming that feels more real than who you are now.",
+            'balanced-future-balanced': "You probably see how things could work better—and it's obvious to you even when no one else sees it.",
+            'balanced-future-other': "You probably get excited about what groups could accomplish if they actually worked together.",
+            'abstract-past-self': "You probably remember feelings more than facts—and those feelings are still vivid.",
+            'abstract-past-balanced': "You probably understand things better after they've happened—hindsight is where you do your best thinking.",
+            'abstract-past-other': "You probably hold certain traditions or principles as standards—not blindly, but because you see what they represent.",
+            'abstract-present-self': "You've probably been told you 'think too much'—and wondered what everyone else does with all that unexamined experience.",
+            'abstract-present-balanced': "You probably notice the texture of your own experience more than most people notice anything.",
+            'abstract-present-other': "You probably know how people feel about each other before they've said anything.",
+            'abstract-future-self': "You probably skim instructions and figure it out as you go—and you're usually right.",
+            'abstract-future-balanced': "You probably see where things are heading long before most people notice anything is changing.",
+            'abstract-future-other': "You probably think about systems more than individuals—and you've felt guilty about that even though it's how you actually help."
+        };
+
+        // ============================================================================
+        // PROFILE NAME MAPPING
+        // ============================================================================
+
+        const profileNames = {
+            'concrete-past-self': 'Sharp',
+            'concrete-past-balanced': 'Seasoned',
+            'concrete-past-other': 'Legacy',
+            'concrete-present-self': 'Embodied',
+            'concrete-present-balanced': 'Grounded',
+            'concrete-present-other': 'Attuned',
+            'concrete-future-self': 'Intentional',
+            'concrete-future-balanced': 'Resilient',
+            'concrete-future-other': 'Reliable',
+            'balanced-past-self': 'Integrated',
+            'balanced-past-balanced': 'Coherent',
+            'balanced-past-other': 'Reconciled',
+            'balanced-present-self': 'Centered',
+            'balanced-present-balanced': 'Equanimous',
+            'balanced-present-other': 'Empathetic',
+            'balanced-future-self': 'Actualized',
+            'balanced-future-balanced': 'Harmonious',
+            'balanced-future-other': 'Collaborative',
+            'abstract-past-self': 'Sentimental',
+            'abstract-past-balanced': 'Reflective',
+            'abstract-past-other': 'Idealized',
+            'abstract-present-self': 'Introspective',
+            'abstract-present-balanced': 'Mindful',
+            'abstract-present-other': 'Intuitive',
+            'abstract-future-self': 'Visionary',
+            'abstract-future-balanced': 'Foresighted',
+            'abstract-future-other': 'Altruistic'
+        };
+
+        // Strength icons
+        const strengthIcons = ['⚡', '🎯', '🔮', '💡', '🌟', '✨'];
+
+        // ============================================================================
+        // STATE
+        // ============================================================================
+
+        let currentQuestion = 0;
+        let answers = {};
+
+        // ============================================================================
+        // FUNCTIONS
+        // ============================================================================
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        window.startAssessment = function() {
+            console.log('Parser Assessment: Starting assessment...');
+            document.getElementById('progressContainer').style.display = 'block';
+            showScreen('questionScreen');
+            showQuestion(0);
+        }
+        console.log('Parser Assessment: startAssessment function registered');
+
+        // Shuffle array (Fisher-Yates algorithm)
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // Store shuffled options per question to maintain consistency when navigating back
+        const shuffledOptionsCache = {};
+
+        function showQuestion(index) {
+            const q = questions[index];
+            const isCalibration = q.phase === 'calibration';
+            const calNum = isCalibration ? index + 1 : null;
+            const assessNum = isCalibration ? null : index - 2;
+
+            if (isCalibration) {
+                document.getElementById('questionPhase').textContent = `Calibration · Question ${calNum} of 3`;
+            } else {
+                document.getElementById('questionPhase').textContent = `Assessment · Question ${assessNum} of 12`;
+            }
+
+            const badge = document.getElementById('questionBadge');
+            badge.textContent = q.dimension.charAt(0).toUpperCase() + q.dimension.slice(1);
+            badge.className = 'question-badge ' + q.dimension;
+
+            document.getElementById('questionText').textContent = q.text;
+
+            const optionsContainer = document.getElementById('answerOptions');
+            optionsContainer.innerHTML = '';
+
+            // Shuffle options (cache to maintain consistency when navigating back)
+            if (!shuffledOptionsCache[q.id]) {
+                shuffledOptionsCache[q.id] = shuffleArray(q.options);
+            }
+            const shuffledOptions = shuffledOptionsCache[q.id];
+            const letters = ['A', 'B', 'C', 'D', 'E'];
+
+            shuffledOptions.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-option';
+                if (q.dimension === 'temporal') btn.classList.add('temporal-q');
+                if (q.dimension === 'reference') btn.classList.add('reference-q');
+                if (answers[q.id] === opt.value) btn.classList.add('selected');
+
+                btn.innerHTML = `
+                    <span class="answer-letter">${letters[i]}</span>
+                    <span class="answer-text">${opt.text}</span>
+                `;
+                btn.onclick = () => selectAnswer(q.id, opt.value, btn, q.dimension);
+                optionsContainer.appendChild(btn);
+            });
+
+            const progress = ((index + 1) / questions.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressLabel').textContent = `Question ${index + 1} of ${questions.length}`;
+            document.getElementById('progressPercent').textContent = Math.round(progress) + '%';
+
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = !answers[q.id];
+            document.getElementById('nextBtn').textContent = index === questions.length - 1 ? 'See Results →' : 'Next →';
+        }
+
+        function selectAnswer(questionId, value, btn, dimension) {
+            answers[questionId] = value;
+
+            document.querySelectorAll('.answer-option').forEach(o => o.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            document.getElementById('nextBtn').disabled = false;
+
+            if (currentQuestion < questions.length - 1) {
+                setTimeout(() => window.nextQuestion(), 300);
+            }
+        }
+
+        window.nextQuestion = function() {
+            if (currentQuestion === 2) {
+                showPrediction();
+                return;
+            }
+
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                showQuestion(currentQuestion);
+            } else {
+                showScreen('emailScreen');
+                document.getElementById('progressContainer').style.display = 'none';
+            }
+        }
+
+        window.prevQuestion = function() {
+            if (currentQuestion > 0) {
+                if (currentQuestion === 3) {
+                    currentQuestion = 2;
+                } else {
+                    currentQuestion--;
+                }
+                showQuestion(currentQuestion);
+            }
+        }
+
+        function showPrediction() {
+            const scores = calculateScores(true);
+            const key = getProfileKey(scores);
+            const prediction = predictions[key] || predictions['balanced-present-balanced'];
+
+            document.getElementById('predictionText').textContent = `"${prediction}"`;
+            showScreen('predictionScreen');
+        }
+
+        window.continuePastPrediction = function() {
+            currentQuestion = 3;
+            showScreen('questionScreen');
+            showQuestion(currentQuestion);
+        }
+
+        window.redoCalibration = function() {
+            answers = {};
+            currentQuestion = 0;
+            showScreen('questionScreen');
+            showQuestion(0);
+        }
+
+        function calculateScores(ddcotOnly = false) {
+            const relevantQuestions = ddcotOnly
+                ? questions.filter(q => q.phase === 'calibration')
+                : questions;
+
+            let spatial = { total: 0, count: 0 };
+            let temporal = { total: 0, count: 0 };
+            let reference = { total: 0, count: 0 };
+
+            relevantQuestions.forEach(q => {
+                const answer = answers[q.id];
+                if (answer === undefined) return;
+
+                if (q.dimension === 'spatial') {
+                    spatial.total += answer;
+                    spatial.count++;
+                } else if (q.dimension === 'temporal') {
+                    temporal.total += answer;
+                    temporal.count++;
+                } else if (q.dimension === 'reference') {
+                    reference.total += answer;
+                    reference.count++;
+                }
+            });
+
+            const toPercent = (dim) => dim.count > 0 ? Math.round(((dim.total / dim.count) - 1) / 4 * 100) : 50;
+
+            return {
+                spatial: toPercent(spatial),
+                temporal: toPercent(temporal),
+                reference: toPercent(reference)
+            };
+        }
+
+        function getProfileKey(scores) {
+            const spatial = scores.spatial < 35 ? 'concrete' : scores.spatial > 65 ? 'abstract' : 'balanced';
+            const temporal = scores.temporal < 35 ? 'past' : scores.temporal > 65 ? 'future' : 'present';
+            const reference = scores.reference < 35 ? 'other' : scores.reference > 65 ? 'self' : 'balanced';
+            return `${spatial}-${temporal}-${reference}`;
+        }
+
+        function getCategoryLabel(dimension, score) {
+            const labels = {
+                spatial: { low: 'Concrete', high: 'Abstract', mid: 'Balanced' },
+                temporal: { low: 'Past', high: 'Future', mid: 'Present' },
+                reference: { low: 'Other', high: 'Self', mid: 'Balanced' }
+            };
+            const cat = score < 35 ? 'low' : score > 65 ? 'high' : 'mid';
+            return labels[dimension][cat];
+        }
+
+        // Store user info for email
+        let userInfo = { name: '', email: '', customerId: '', lifeStage: 'established' };
+        let completionLogPromise = null;
+
+        // Life stage selection handler
+        document.querySelectorAll('input[name="lifeStage"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.querySelectorAll('.life-stage-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                    opt.style.border = '2px solid var(--text-muted)';
+                    opt.style.background = 'transparent';
+                });
+                const selected = this.closest('label').querySelector('.life-stage-option');
+                selected.classList.add('selected');
+                selected.style.border = '2px solid var(--accent-spatial)';
+                selected.style.background = 'var(--accent-spatial-dim)';
+                userInfo.lifeStage = this.value;
+            });
+        });
+
+        // Get selected life stage
+        window.getSelectedLifeStage = function() {
+            const selected = document.querySelector('input[name="lifeStage"]:checked');
+            return selected ? selected.value : 'established';
+        }
+
+        // Submit email and show results
+        window.submitEmailAndShowResults = async function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const name = document.getElementById('nameInput').value.trim();
+            const lifeStage = getSelectedLifeStage();
+
+            if (!email) {
+                alert('Please enter your email to receive your results.');
+                return;
+            }
+
+            // Store user info
+            userInfo.email = email;
+            userInfo.name = name;
+            userInfo.lifeStage = lifeStage;
+
+            // Show results (fires log-completion in background, gets customer ID)
+            window.showResults(false, lifeStage);
+
+            // Wait for customer ID from log-completion, then send user their email
+            const scores = calculateScores(false);
+            const key = getProfileKey(scores);
+            const profileName = profileNames[key] || 'Equanimous';
+            const profile = getProfileByName(profileName);
+
+            try {
+                const customerId = await completionLogPromise;
+                await fetch('/api/send-results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        name: name,
+                        profileName: profileName,
+                        profileCode: `${getCategoryLabel('spatial', scores.spatial)} • ${getCategoryLabel('temporal', scores.temporal)} • ${getCategoryLabel('reference', scores.reference)}`,
+                        scores: scores,
+                        overview: profile?.overview || '',
+                        phrase: profile?.phrase || '',
+                        strengths: profile?.strengths || [],
+                        howYouLearn: profile?.howYouLearn || '',
+                        howYouCommunicate: profile?.howYouCommunicate || '',
+                        primaryChallenge: profile?.challenges?.[0] || null,
+                        customerId: customerId
+                    })
+                });
+            } catch (error) {
+                console.error('Email error:', error);
+            }
+        }
+
+        window.showResults = function(skippedEmail, lifeStage) {
+            showScreen('resultsScreen');
+
+            // Use passed lifeStage or get from selection
+            const selectedLifeStage = lifeStage || getSelectedLifeStage();
+            userInfo.lifeStage = selectedLifeStage;
+
+            const scores = calculateScores(false);
+            const key = getProfileKey(scores);
+            const name = profileNames[key] || 'Equanimous';
+
+            // Get the actual profile data
+            const profile = getProfileByName(name);
+
+            // Log completion — generates customer ID and sends full notification to library
+            completionLogPromise = fetch('/api/log-completion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    profileName: name,
+                    profileCode: key,
+                    scores: scores,
+                    emailProvided: !skippedEmail,
+                    assessmentType: 'adult',
+                    userEmail: skippedEmail ? null : userInfo.email,
+                    userName: skippedEmail ? null : userInfo.name,
+                    overview: profile?.overview || '',
+                    phrase: profile?.phrase || '',
+                    strengths: profile?.strengths || [],
+                    howYouLearn: profile?.howYouLearn || '',
+                    howYouCommunicate: profile?.howYouCommunicate || '',
+                    primaryChallenge: profile?.challenges?.[0] || null
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.customerId) {
+                    userInfo.customerId = data.customerId;
+                    document.getElementById('customerIdValue').textContent = data.customerId;
+                    document.getElementById('customerIdDisplay').style.display = 'inline-block';
+                }
+                return data.customerId;
+            }).catch(err => {
+                console.error('[log-completion] fetch failed:', err);
+                return null;
+            });
+
+            // TODO: Once life-stage variants are added to profiles, use:
+            // const profileContent = selectedLifeStage === 'early' ? profile.earlyCareer : profile.established;
+            // For now, use the default profile content
+
+            // Header
+            document.getElementById('profileName').textContent = name;
+
+            // Gradient markers
+            setTimeout(() => {
+                document.getElementById('spatialMarker').style.left = scores.spatial + '%';
+                document.getElementById('temporalMarker').style.left = scores.temporal + '%';
+                document.getElementById('referenceMarker').style.left = scores.reference + '%';
+            }, 100);
+
+            // Gradient values
+            const spatialDir = scores.spatial >= 50 ? 'Abstract' : 'Concrete';
+            const temporalDir = scores.temporal >= 50 ? 'Future' : 'Past';
+            const referenceDir = scores.reference >= 50 ? 'Self' : 'Other';
+
+            document.getElementById('spatialValue').textContent =
+                `${scores.spatial >= 50 ? scores.spatial : 100 - scores.spatial}% ${spatialDir}`;
+            document.getElementById('temporalValue').textContent =
+                `${scores.temporal >= 50 ? scores.temporal : 100 - scores.temporal}% ${temporalDir}`;
+            document.getElementById('referenceValue').textContent =
+                `${scores.reference >= 50 ? scores.reference : 100 - scores.reference}% ${referenceDir}`;
+
+            // Load profile content
+            if (profile) {
+                loadProfileContent(profile, key);
+            } else {
+                loadFallbackContent(name, key);
+            }
+        }
+
+        function loadProfileContent(profile, key) {
+            // FREE TIER: Profile Overview
+            if (profile.overview) {
+                const overviewHtml = profile.overview.split('\n\n')
+                    .filter(p => p.trim())
+                    .map(p => `<p>${p}</p>`)
+                    .join('');
+                document.getElementById('profileDescription').innerHTML = overviewHtml;
+            }
+
+            // FREE TIER: The Phrase
+            if (profile.phrase) {
+                document.getElementById('phraseContent').textContent = `"${profile.phrase}"`;
+            }
+
+            // FREE TIER: 6 Strengths
+            if (profile.strengths && profile.strengths.length > 0) {
+                const strengthsHtml = profile.strengths.slice(0, 6).map((s, i) => `
+                    <div class="trait-item">
+                        <div class="trait-icon">${strengthIcons[i % strengthIcons.length]}</div>
+                        <div class="trait-content">
+                            <h4>${s.title}</h4>
+                            <p>${s.description}</p>
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('strengthsGrid').innerHTML = strengthsHtml;
+            }
+
+            // FREE TIER: How You Learn (first paragraph only)
+            if (profile.howYouLearn) {
+                const learnParagraphs = profile.howYouLearn.split('\n\n').filter(p => p.trim());
+                const learnHtml = learnParagraphs.length > 0 ? `<p>${learnParagraphs[0]}</p>` : '';
+                document.getElementById('howYouLearnContent').innerHTML = learnHtml;
+            }
+
+            // FREE TIER: How You Communicate (first paragraph only)
+            if (profile.howYouCommunicate) {
+                const commParagraphs = profile.howYouCommunicate.split('\n\n').filter(p => p.trim());
+                const commHtml = commParagraphs.length > 0 ? `<p>${commParagraphs[0]}</p>` : '';
+                document.getElementById('howYouCommunicateContent').innerHTML = commHtml;
+            }
+
+            // FREE TIER: 1 Challenge (first paragraph only)
+            if (profile.challenges && profile.challenges.length > 0) {
+                const challenge = profile.challenges[0];
+                const challengeParagraphs = challenge.challenge.split('\n\n').filter(p => p.trim());
+                const challengeText = challengeParagraphs.length > 0 ? challengeParagraphs[0] : challenge.challenge;
+                document.getElementById('primaryChallengeContent').innerHTML = `
+                    <div class="challenge-item">
+                        <h4>🎯 ${challenge.title}</h4>
+                        <p class="challenge-text">${challengeText}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function loadFallbackContent(name, key) {
+            // Fallback content if profile data is not found
+            document.getElementById('profileDescription').innerHTML = `
+                <p>Your Parser Profile™ is <strong>${name}</strong>. This profile represents your unique cognitive architecture—the way your brain naturally parses reality across spatial, temporal, and reference dimensions.</p>
+                <p>Your cognitive signature shapes how you process information, make decisions, and interact with the world around you.</p>
+            `;
+
+            document.getElementById('phraseContent').textContent =
+                `"${predictions[key] || 'Your cognitive architecture shapes how you experience reality.'}"`;
+
+            document.getElementById('strengthsGrid').innerHTML = `
+                <div class="trait-item">
+                    <div class="trait-icon">⚡</div>
+                    <div class="trait-content">
+                        <h4>Profile Loading</h4>
+                        <p>Full profile content will be available when properly connected.</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('howYouLearnContent').innerHTML = '<p>Learning style content loading...</p>';
+            document.getElementById('howYouCommunicateContent').innerHTML = '<p>Communication style content loading...</p>';
+            document.getElementById('primaryChallengeContent').innerHTML = '<p>Challenge content loading...</p>';
+        }
+
+        window.scrollToCTA = function() {
+            document.getElementById('ctaCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ============================================================================
+        // STRIPE PAYMENT INTEGRATION
+        // ============================================================================
+
+        let currentProfile = null; // Store for PDF generation
+        let stripe = null;
+        let cardElement = null;
+        let stripeInitialized = false;
+        let activePromo = null; // { type: 'free'|'discount', code: string, discount: number, newAmount: number }
+
+        // Apply promo code
+        window.applyPromoCode = async function() {
+            const input = document.getElementById('promoInput');
+            const statusEl = document.getElementById('promo-status');
+            const code = input.value.trim();
+
+            if (!code) {
+                statusEl.textContent = 'Please enter a promo code.';
+                statusEl.style.color = '#ff6b6b';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/validate-promo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    activePromo = { type: data.type, code: code, discount: data.discount, newAmount: data.newAmount };
+                    statusEl.style.color = 'var(--accent-spatial)';
+
+                    if (data.type === 'free') {
+                        statusEl.textContent = 'Promo applied — Full report is free!';
+                        document.getElementById('display-price').textContent = '$0.00';
+                        document.getElementById('discount-badge').textContent = '100% OFF';
+                        document.getElementById('discount-badge').style.display = 'inline-block';
+                        // Hide payment options, change button to unlock
+                        document.getElementById('payment-request-button').style.display = 'none';
+                        document.getElementById('payment-divider').style.display = 'none';
+                        document.getElementById('card-element').style.display = 'none';
+                        document.getElementById('card-errors').style.display = 'none';
+                        document.getElementById('card-button').textContent = 'Unlock Full Report';
+                    } else {
+                        const newPrice = (data.newAmount / 100).toFixed(2);
+                        statusEl.textContent = `Promo applied — ${data.discount}% off!`;
+                        document.getElementById('display-price').innerHTML = `<s style="color: var(--text-muted); font-size: 0.7em;">$49.99</s> $${newPrice}`;
+                        document.getElementById('discount-badge').textContent = `${data.discount}% OFF`;
+                        document.getElementById('discount-badge').style.display = 'inline-block';
+                        document.getElementById('card-button').textContent = `Pay $${newPrice}`;
+                        // Update Payment Request amount for Apple Pay / Google Pay
+                        updatePaymentRequestAmount(data.newAmount);
+                    }
+
+                    // Disable promo input after successful apply
+                    input.disabled = true;
+                    document.getElementById('applyPromoBtn').disabled = true;
+                    document.getElementById('applyPromoBtn').style.opacity = '0.5';
+                } else {
+                    activePromo = null;
+                    statusEl.textContent = data.error || 'Invalid promo code.';
+                    statusEl.style.color = '#ff6b6b';
+                }
+            } catch (e) {
+                statusEl.textContent = 'Error validating code. Try again.';
+                statusEl.style.color = '#ff6b6b';
+            }
+        }
+
+        // Store profile data when showing results
+        const originalShowResults = window.showResults;
+        window.showResults = function(...args) {
+            originalShowResults(...args);
+            // Store current profile data for later use
+            const scores = calculateScores(false);
+            const key = getProfileKey(scores);
+            const name = profileNames[key] || 'Equanimous';
+            currentProfile = {
+                name: name,
+                code: `${getCategoryLabel('spatial', scores.spatial)} • ${getCategoryLabel('temporal', scores.temporal)} • ${getCategoryLabel('reference', scores.reference)}`,
+                profile: getProfileByName(name),
+                scores: scores
+            };
+        }
+
+        // Initialize Stripe
+        let paymentRequest = null;
+
+        async function initializeStripe() {
+            if (stripeInitialized || !window.Stripe) {
+                return;
+            }
+
+            // Fetch publishable key from server
+            const configResponse = await fetch('/api/config');
+            const config = await configResponse.json();
+            stripe = Stripe(config.stripePublishableKey);
+
+            const elements = stripe.elements();
+
+            // Create Payment Request for Apple Pay / Google Pay
+            paymentRequest = stripe.paymentRequest({
+                country: 'US',
+                currency: 'usd',
+                total: {
+                    label: 'Parser Profile™ Full Report',
+                    amount: activePromo?.newAmount || 4999,
+                },
+                requestPayerEmail: true,
+            });
+
+            // Check if Apple Pay / Google Pay is available
+            const prButton = elements.create('paymentRequestButton', {
+                paymentRequest: paymentRequest,
+                style: {
+                    paymentRequestButton: {
+                        type: 'default',
+                        theme: 'dark',
+                        height: '48px',
+                    },
+                },
+            });
+
+            paymentRequest.canMakePayment().then(function(result) {
+                if (result) {
+                    prButton.mount('#payment-request-button');
+                    document.getElementById('payment-request-button').classList.remove('hidden');
+                    document.getElementById('payment-divider').classList.remove('hidden');
+                }
+            });
+
+            // Handle Payment Request payment
+            paymentRequest.on('paymentmethod', async function(ev) {
+                const statusEl = document.getElementById('payment-status');
+                statusEl.textContent = 'Processing...';
+                statusEl.className = '';
+
+                try {
+                    // Create PaymentIntent on the server
+                    const email = ev.payerEmail || document.getElementById('emailInput')?.value || '';
+                    const response = await fetch('/api/create-payment-intent', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            profileName: currentProfile?.name || 'Unknown',
+                            email: email,
+                            promoCode: activePromo?.code || ''
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (!result.success) {
+                        ev.complete('fail');
+                        throw new Error(result.error || 'Failed to create payment');
+                    }
+
+                    // Confirm the payment
+                    const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+                        result.clientSecret,
+                        { payment_method: ev.paymentMethod.id },
+                        { handleActions: false }
+                    );
+
+                    if (confirmError) {
+                        ev.complete('fail');
+                        throw new Error(confirmError.message);
+                    }
+
+                    ev.complete('success');
+
+                    if (paymentIntent.status === 'requires_action') {
+                        const { error } = await stripe.confirmCardPayment(result.clientSecret);
+                        if (error) {
+                            throw new Error(error.message);
+                        }
+                    }
+
+                    statusEl.textContent = 'Payment successful!';
+                    statusEl.className = 'success';
+                    setTimeout(() => {
+                        closePaymentModal();
+                        unlockFullReport();
+                    }, 1500);
+                } catch (e) {
+                    console.error('Payment Request error:', e);
+                    statusEl.textContent = e.message || 'Payment failed. Please try again.';
+                    statusEl.className = 'error';
+                }
+            });
+
+            // Create card element
+            cardElement = elements.create('card', {
+                style: {
+                    base: {
+                        color: '#1A1A2E',
+                        fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
+                        fontSize: '16px',
+                        iconColor: '#64748B',
+                        '::placeholder': { color: '#64748B' }
+                    },
+                    invalid: {
+                        color: '#DC2626',
+                        iconColor: '#DC2626'
+                    }
+                }
+            });
+            cardElement.mount('#card-element');
+
+            cardElement.on('change', function(event) {
+                const displayError = document.getElementById('card-errors');
+                displayError.textContent = event.error ? event.error.message : '';
+            });
+
+            // Handle form submission
+            const form = document.getElementById('payment-form');
+            form.addEventListener('submit', handlePayment);
+
+            stripeInitialized = true;
+        }
+
+        // Update payment request amount when promo is applied
+        function updatePaymentRequestAmount(amount) {
+            if (paymentRequest) {
+                paymentRequest.update({
+                    total: {
+                        label: 'Parser Profile™ Full Report',
+                        amount: amount,
+                    },
+                });
+            }
+        }
+
+        // Handle Stripe payment
+        async function handlePayment(event) {
+            event.preventDefault();
+
+            const submitButton = document.getElementById('card-button');
+            const statusEl = document.getElementById('payment-status');
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Processing...';
+            statusEl.textContent = '';
+            statusEl.className = '';
+
+            try {
+                // If free promo, skip payment entirely
+                if (activePromo && activePromo.type === 'free') {
+                    statusEl.textContent = 'Unlocking your full report...';
+                    statusEl.className = 'success';
+                    setTimeout(() => {
+                        closePaymentModal();
+                        unlockFullReport();
+                    }, 1000);
+                    return;
+                }
+
+                // Create PaymentIntent on the server
+                const email = document.getElementById('emailInput')?.value || '';
+                const response = await fetch('/api/create-payment-intent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        profileName: currentProfile?.name || 'Unknown',
+                        email: email,
+                        promoCode: activePromo?.code || ''
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to create payment');
+                }
+
+                // Confirm the payment with Stripe.js
+                const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(result.clientSecret, {
+                    payment_method: { card: cardElement }
+                });
+
+                if (stripeError) {
+                    throw new Error(stripeError.message);
+                }
+
+                if (paymentIntent.status === 'succeeded') {
+                    statusEl.textContent = 'Payment successful!';
+                    statusEl.className = 'success';
+
+                    setTimeout(() => {
+                        closePaymentModal();
+                        unlockFullReport();
+                    }, 1500);
+                }
+            } catch (e) {
+                console.error('Payment error:', e);
+                statusEl.textContent = e.message || 'Payment failed. Please try again.';
+                statusEl.className = 'error';
+            } finally {
+                submitButton.disabled = false;
+                const btnPrice = activePromo?.type === 'discount' ? '$' + (activePromo.newAmount / 100).toFixed(2) : '$49.99';
+                submitButton.textContent = activePromo?.type === 'free' ? 'Unlock Full Report' : `Pay ${btnPrice}`;
+            }
+        }
+
+        // Open payment modal
+        window.openPaymentModal = function() {
+            document.getElementById('paymentModal').classList.add('active');
+            if (!stripeInitialized) {
+                initializeStripe();
+            }
+        }
+
+        // Close payment modal
+        window.closePaymentModal = function() {
+            document.getElementById('paymentModal').classList.remove('active');
+            document.getElementById('payment-status').textContent = '';
+            document.getElementById('payment-status').className = '';
+            // Reset promo state
+            activePromo = null;
+            document.getElementById('promoInput').value = '';
+            document.getElementById('promoInput').disabled = false;
+            document.getElementById('applyPromoBtn').disabled = false;
+            document.getElementById('applyPromoBtn').style.opacity = '1';
+            document.getElementById('promo-status').textContent = '';
+            document.getElementById('display-price').textContent = '$49.99';
+            document.getElementById('discount-badge').style.display = 'none';
+            // Reset payment elements visibility
+            document.getElementById('payment-request-button').style.display = '';
+            document.getElementById('payment-divider').style.display = '';
+            document.getElementById('card-element').style.display = '';
+            document.getElementById('card-errors').style.display = '';
+            document.getElementById('card-button').textContent = 'Pay $49.99';
+            // Reset Payment Request amount
+            updatePaymentRequestAmount(4999);
+        }
+
+        // ============================================================================
+        // UNLOCK CONTENT
+        // ============================================================================
+
+        window.unlockFullReport = function() {
+            const profile = currentProfile?.profile;
+            if (!profile) {
+                console.error('No profile data available');
+                return;
+            }
+
+            // Show download section
+            document.getElementById('downloadSection').classList.add('visible');
+
+            // Hide CTA card
+            document.getElementById('ctaCard').style.display = 'none';
+
+            // Unlock all locked sections
+            document.querySelectorAll('.locked-section').forEach(section => {
+                section.classList.add('unlocked');
+            });
+
+            // Populate paid tier content
+            populatePaidContent(profile);
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Test unlock (for development)
+        window.testUnlock = function() {
+            if (!currentProfile) {
+                alert('Please complete the assessment first');
+                return;
+            }
+            unlockFullReport();
+        }
+
+        function populatePaidContent(profile) {
+            // The Secret
+            const secretSection = document.querySelector('#secretPreview');
+            if (secretSection && profile.secret) {
+                const isUnlocked = secretSection.closest('.locked-section')?.classList.contains('unlocked');
+                const secretParagraphs = profile.secret.split('\n\n').filter(p => p.trim());
+
+                let secretHtml;
+                if (isUnlocked) {
+                    // Show full content when unlocked
+                    secretHtml = secretParagraphs.map(p => `<p>${p}</p>`).join('');
+                } else {
+                    // Show first paragraph + teaser when locked
+                    const firstParagraph = secretParagraphs[0] ? `<p>${secretParagraphs[0]}</p>` : '';
+                    const teaser = '<p style="color: var(--accent-spatial); font-style: italic; margin-top: 12px;">Continue reading in your full Parser Profile™...</p>';
+                    secretHtml = firstParagraph + teaser;
+                }
+
+                secretSection.innerHTML = `
+                    <h3>🤫 The Secret You've Carried</h3>
+                    <div class="content-section">${secretHtml}</div>
+                `;
+            }
+
+            // All 6 Challenges
+            const challengesSection = document.querySelectorAll('.locked-section')[1];
+            if (challengesSection && profile.challenges) {
+                const challengesHtml = profile.challenges.map(c => `
+                    <div class="challenge-item">
+                        <h4>🎯 ${c.title}</h4>
+                        <p class="challenge-text">${c.challenge}</p>
+                        <div class="remedy">
+                            <strong>Remedy:</strong>
+                            ${c.remedy}
+                        </div>
+                    </div>
+                `).join('');
+                challengesSection.querySelector('.locked-content').innerHTML = `
+                    <h3>🎯 All 6 Natural Challenges</h3>
+                    ${challengesHtml}
+                `;
+            }
+
+            // What Others Get Wrong
+            const wrongSection = document.querySelectorAll('.locked-section')[2];
+            if (wrongSection && profile.whatOthersGetWrong) {
+                const wrongHtml = profile.whatOthersGetWrong.split('\n\n')
+                    .filter(p => p.trim())
+                    .map(p => `<p>${p}</p>`)
+                    .join('');
+                wrongSection.querySelector('.locked-content').innerHTML = `
+                    <h3>🎭 What Others Get Wrong About You</h3>
+                    <div class="content-section">${wrongHtml}</div>
+                `;
+            }
+
+            // Hidden Superpower
+            const superpowerSection = document.querySelectorAll('.locked-section')[3];
+            if (superpowerSection && profile.hiddenSuperpower) {
+                const superpowerHtml = profile.hiddenSuperpower.split('\n\n')
+                    .filter(p => p.trim())
+                    .map(p => `<p>${p}</p>`)
+                    .join('');
+                superpowerSection.querySelector('.locked-content').innerHTML = `
+                    <h3>✨ Your Hidden Superpower</h3>
+                    <div class="content-section">${superpowerHtml}</div>
+                `;
+            }
+
+            // Blind Spot
+            const blindSpotSection = document.querySelectorAll('.locked-section')[4];
+            if (blindSpotSection && profile.blindSpot) {
+                const blindSpotHtml = profile.blindSpot.split('\n\n')
+                    .filter(p => p.trim())
+                    .map(p => `<p>${p}</p>`)
+                    .join('');
+                blindSpotSection.querySelector('.locked-content').innerHTML = `
+                    <h3>👁️ Your Blind Spot</h3>
+                    <div class="content-section">${blindSpotHtml}</div>
+                `;
+            }
+
+            // Friction Patterns
+            const frictionSection = document.querySelectorAll('.locked-section')[5];
+            if (frictionSection && profile.frictionPatterns) {
+                const frictionHtml = profile.frictionPatterns.split('\n\n')
+                    .filter(p => p.trim())
+                    .map(p => `<p>${p}</p>`)
+                    .join('');
+                frictionSection.querySelector('.locked-content').innerHTML = `
+                    <h3>⚡ Friction Patterns</h3>
+                    <div class="content-section">${frictionHtml}</div>
+                `;
+            }
+
+            // Energy Patterns
+            const energySection = document.querySelectorAll('.locked-section')[6];
+            if (energySection && profile.energyPatterns) {
+                // Parse the string format: "Energizes:\n\n• item\n\n• item\n\nDrains:\n\n• item"
+                const energyText = profile.energyPatterns;
+                const parts = energyText.split(/Drains:/i);
+                const energizesPart = parts[0].replace(/Energizes:/i, '').trim();
+                const drainsPart = parts[1] ? parts[1].trim() : '';
+
+                const parseItems = (text) => text.split('•')
+                    .map(item => item.trim())
+                    .filter(item => item.length > 0)
+                    .map(item => `<li>${item}</li>`)
+                    .join('');
+
+                const energizesHtml = parseItems(energizesPart);
+                const drainsHtml = parseItems(drainsPart);
+
+                energySection.querySelector('.locked-content').innerHTML = `
+                    <h3>🔋 What Energizes vs. Drains You</h3>
+                    <div class="energy-grid">
+                        <div class="energy-column energizes">
+                            <h4>⚡ Energizes</h4>
+                            <ul>${energizesHtml}</ul>
+                        </div>
+                        <div class="energy-column drains">
+                            <h4>🔌 Drains</h4>
+                            <ul>${drainsHtml}</ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Work Environments
+            const envSection = document.querySelectorAll('.locked-section')[7];
+            if (envSection && profile.workEnvironments) {
+                // Parse string format into paragraphs
+                const envHtml = profile.workEnvironments.split('\n\n')
+                    .filter(p => p.trim())
+                    .map(p => `<p>${p}</p>`)
+                    .join('');
+                envSection.querySelector('.locked-content').innerHTML = `
+                    <h3>🏢 Optimal Work Environments</h3>
+                    <div class="content-section">${envHtml}</div>
+                `;
+            }
+
+            // Block Indicators
+            const blockSection = document.querySelectorAll('.locked-section')[8];
+            if (blockSection && profile.blockIndicators) {
+                // Parse string format into paragraphs with bullet points
+                const blockHtml = profile.blockIndicators.split('\n\n')
+                    .filter(p => p.trim())
+                    .map(p => {
+                        // Handle bullet points
+                        if (p.includes('•')) {
+                            const lines = p.split('•').filter(l => l.trim());
+                            if (lines.length > 1) {
+                                return `<ul>${lines.map(l => `<li>${l.trim()}</li>`).join('')}</ul>`;
+                            }
+                        }
+                        return `<p>${p}</p>`;
+                    })
+                    .join('');
+                blockSection.querySelector('.locked-content').innerHTML = `
+                    <h3>🧱 Cognitive Block Indicators</h3>
+                    <div class="content-section">${blockHtml}</div>
+                `;
+            }
+        }
+
+        // ============================================================================
+        // PDF GENERATION
+        // ============================================================================
+
+        window.downloadPDF = function() {
+            if (!currentProfile) {
+                alert('No profile data available');
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const margin = 18;
+                const contentWidth = pageWidth - margin * 2;
+                let y = 0;
+
+                // Color palette
+                const colors = {
+                    darkBg: [10, 10, 15],
+                    accent: [0, 212, 170],
+                    accentDark: [0, 160, 130],
+                    purple: [168, 85, 247],
+                    gold: [255, 200, 87],
+                    textDark: [26, 26, 36],
+                    textBody: [60, 60, 80],
+                    textMuted: [120, 120, 140],
+                    textLight: [180, 180, 195],
+                    divider: [220, 220, 230],
+                    cardBg: [248, 248, 252],
+                    white: [255, 255, 255]
+                };
+
+                function checkPage(needed) {
+                    if (y + needed > pageHeight - 15) {
+                        doc.addPage();
+                        y = margin;
+                    }
+                }
+
+                function drawRoundedRect(x, rY, w, h, r, fillColor) {
+                    doc.setFillColor(...fillColor);
+                    doc.roundedRect(x, rY, w, h, r, r, 'F');
+                }
+
+                // === COVER HEADER ===
+                // Clean white header with accent accents
+                doc.setDrawColor(...colors.accent);
+                doc.setLineWidth(1);
+                doc.line(0, 0, pageWidth, 0);
+
+                // Title
+                doc.setFontSize(28);
+                doc.setTextColor(...colors.accent);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Parser Profile\u2122', pageWidth / 2, 20, { align: 'center' });
+
+                // Subtitle
+                doc.setFontSize(9);
+                doc.setTextColor(...colors.textMuted);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Developed by J.D. Mercer  |  Cognition Blocks Intelligence Framework', pageWidth / 2, 27, { align: 'center' });
+
+                // Divider
+                y = 33;
+                doc.setDrawColor(...colors.divider);
+                doc.setLineWidth(0.3);
+                doc.line(margin + 40, y, pageWidth - margin - 40, y);
+                y += 10;
+
+                // Profile name
+                doc.setFontSize(24);
+                doc.setTextColor(...colors.textDark);
+                doc.setFont('helvetica', 'bold');
+                doc.text(currentProfile.name, pageWidth / 2, y, { align: 'center' });
+                y += 4;
+
+                // Accent underline beneath profile name
+                const nameWidth = doc.getTextWidth(currentProfile.name);
+                doc.setDrawColor(...colors.accent);
+                doc.setLineWidth(0.8);
+                doc.line((pageWidth - nameWidth) / 2, y, (pageWidth + nameWidth) / 2, y);
+                y += 12;
+
+                // === DIMENSION SCORES WITH VISUAL BARS ===
+                doc.setFontSize(14);
+                doc.setTextColor(...colors.textDark);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Dimension Scores', margin, y);
+                y += 3;
+                doc.setDrawColor(...colors.accent);
+                doc.setLineWidth(0.6);
+                doc.line(margin, y, margin + 40, y);
+                y += 8;
+
+                const scores = currentProfile.scores;
+                const dimensionData = [
+                    {
+                        label: 'Spatial Processing',
+                        value: scores.spatial,
+                        direction: scores.spatial >= 50 ? 'Abstract' : 'Concrete',
+                        definition: 'How you organize and interpret information \u2014 from hands-on and detail-oriented (Concrete) to big-picture and conceptual (Abstract).',
+                        barColor: colors.accent,
+                        poles: ['Concrete', 'Abstract']
+                    },
+                    {
+                        label: 'Temporal Processing',
+                        value: scores.temporal,
+                        direction: scores.temporal >= 50 ? 'Future' : 'Past',
+                        definition: 'Where your mind naturally anchors in time \u2014 drawing from experience and precedent (Past) or anticipating what\u2019s next (Future).',
+                        barColor: colors.gold,
+                        poles: ['Past', 'Future']
+                    },
+                    {
+                        label: 'Reference Processing',
+                        value: scores.reference,
+                        direction: scores.reference >= 50 ? 'Self' : 'Other',
+                        definition: 'How you make decisions and evaluate situations \u2014 guided by others\u2019 needs and perspectives (Other) or by your own internal compass (Self).',
+                        barColor: colors.purple,
+                        poles: ['Other', 'Self']
+                    }
+                ];
+
+                const barWidth = contentWidth - 4;
+                const barHeight = 4;
+                const barX = margin + 2;
+
+                dimensionData.forEach(dim => {
+                    checkPage(28);
+
+                    // Label and value
+                    doc.setFontSize(11);
+                    doc.setTextColor(...colors.textDark);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(dim.label, margin, y);
+
+                    const displayVal = dim.value >= 50 ? dim.value : (100 - dim.value);
+                    const valText = `${displayVal}% ${dim.direction}`;
+                    doc.setFontSize(10);
+                    doc.setTextColor(...dim.barColor);
+                    doc.text(valText, pageWidth - margin, y, { align: 'right' });
+                    y += 5;
+
+                    // Track background
+                    drawRoundedRect(barX, y, barWidth, barHeight, 2, [230, 230, 235]);
+
+                    // Filled bar
+                    const fillWidth = Math.max(4, (dim.value / 100) * barWidth);
+                    drawRoundedRect(barX, y, fillWidth, barHeight, 2, dim.barColor);
+
+                    y += barHeight + 2;
+
+                    // Pole labels
+                    doc.setFontSize(7.5);
+                    doc.setTextColor(...colors.textMuted);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(dim.poles[0], barX, y);
+                    doc.text(dim.poles[1], barX + barWidth, y, { align: 'right' });
+                    y += 4;
+
+                    // Definition
+                    doc.setFontSize(8.5);
+                    doc.setTextColor(...colors.textMuted);
+                    const defLines = doc.splitTextToSize(dim.definition, contentWidth - 4);
+                    defLines.forEach(line => {
+                        doc.text(line, margin + 2, y);
+                        y += 3.5;
+                    });
+                    y += 5;
+                });
+
+                y += 2;
+
+                // === HELPER FUNCTIONS ===
+                function addSectionHeader(text) {
+                    checkPage(16);
+                    y += 5;
+                    doc.setFillColor(...colors.accent);
+                    doc.rect(margin, y - 4, 3, 12, 'F');
+                    doc.setFontSize(13);
+                    doc.setTextColor(...colors.textDark);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(text, margin + 7, y + 3);
+                    y += 12;
+                }
+
+                function addParagraph(text, indent) {
+                    if (!text) return;
+                    // Normalize single newlines to spaces (profile data has hard line breaks from source formatting)
+                    const normalized = text.trim().replace(/\n/g, ' ').replace(/  +/g, ' ');
+                    doc.setFontSize(10.5);
+                    doc.setTextColor(...colors.textBody);
+                    doc.setFont('helvetica', 'normal');
+                    const x = margin + (indent || 0);
+                    const w = contentWidth - (indent || 0);
+                    const lines = doc.splitTextToSize(normalized, w);
+                    lines.forEach(line => {
+                        checkPage(6);
+                        doc.text(line, x, y);
+                        y += 5.2;
+                    });
+                    y += 3;
+                }
+
+                function addLongText(text) {
+                    if (!text) return;
+                    const paragraphs = text.split('\n\n').filter(p => p.trim());
+                    paragraphs.forEach(p => addParagraph(p));
+                }
+
+                function addBulletItem(text) {
+                    const normalized = text.trim().replace(/\n/g, ' ').replace(/  +/g, ' ');
+                    doc.setFontSize(10.5);
+                    doc.setTextColor(...colors.textBody);
+                    doc.setFont('helvetica', 'normal');
+                    const lines = doc.splitTextToSize(normalized, contentWidth - 10);
+                    checkPage(lines.length * 5.2 + 2);
+                    doc.setTextColor(...colors.accent);
+                    doc.text('\u2022', margin + 2, y);
+                    doc.setTextColor(...colors.textBody);
+                    lines.forEach((line, i) => {
+                        doc.text(line, margin + 8, y);
+                        y += 5.2;
+                    });
+                    y += 2;
+                }
+
+                // === PROFILE SECTIONS ===
+                const profile = currentProfile.profile;
+                if (!profile) {
+                    addParagraph('Profile data not available.');
+                } else {
+                    // Overview
+                    if (profile.overview) {
+                        addSectionHeader('Profile Overview');
+                        addLongText(profile.overview);
+                    }
+
+                    // Phrase — styled quote box
+                    if (profile.phrase) {
+                        addSectionHeader('The Phrase That Hits Home');
+                        checkPage(18);
+                        const phraseText = '\u201C' + profile.phrase.replace(/\n/g, ' ').replace(/  +/g, ' ') + '\u201D';
+                        doc.setFontSize(11);
+                        doc.setFont('helvetica', 'italic');
+                        const phraseLines = doc.splitTextToSize(phraseText, contentWidth - 20);
+                        const boxHeight = phraseLines.length * 5.5 + 12;
+                        drawRoundedRect(margin, y - 2, contentWidth, boxHeight, 3, [248, 245, 255]);
+                        doc.setFillColor(...colors.purple);
+                        doc.rect(margin, y - 2, 3, boxHeight, 'F');
+                        doc.setTextColor(100, 60, 180);
+                        phraseLines.forEach(line => {
+                            doc.text(line, margin + 12, y + 5);
+                            y += 5.5;
+                        });
+                        y += 10;
+                    }
+
+                    // Strengths — with numbered items
+                    if (profile.strengths && profile.strengths.length) {
+                        addSectionHeader('Cognitive Strengths');
+                        profile.strengths.forEach((s, i) => {
+                            checkPage(16);
+                            const sTitle = s.title.replace(/\n/g, ' ').replace(/  +/g, ' ');
+                            // Strength title with number badge
+                            doc.setFillColor(...colors.accent);
+                            doc.circle(margin + 4, y - 1.5, 3, 'F');
+                            doc.setFontSize(8);
+                            doc.setTextColor(...colors.white);
+                            doc.setFont('helvetica', 'bold');
+                            doc.text(String(i + 1), margin + 4, y - 0.5, { align: 'center' });
+
+                            doc.setFontSize(10.5);
+                            doc.setTextColor(...colors.textDark);
+                            doc.setFont('helvetica', 'bold');
+                            const sTitleLines = doc.splitTextToSize(sTitle, contentWidth - 12);
+                            sTitleLines.forEach(line => {
+                                doc.text(line, margin + 10, y);
+                                y += 5;
+                            });
+                            doc.setFont('helvetica', 'normal');
+                            doc.setTextColor(...colors.textBody);
+                            addParagraph(s.description, 10);
+                        });
+                    }
+
+                    // How You Learn
+                    if (profile.howYouLearn) {
+                        addSectionHeader('How You Learn Best');
+                        addLongText(profile.howYouLearn);
+                    }
+
+                    // How You Communicate
+                    if (profile.howYouCommunicate) {
+                        addSectionHeader('How You Communicate');
+                        addLongText(profile.howYouCommunicate);
+                    }
+
+                    // Challenges — with remedy in accent color
+                    if (profile.challenges && profile.challenges.length) {
+                        addSectionHeader('Natural Challenges');
+                        profile.challenges.forEach(c => {
+                            checkPage(16);
+                            doc.setFontSize(10.5);
+                            doc.setTextColor(...colors.textDark);
+                            doc.setFont('helvetica', 'bold');
+                            const titleLines = doc.splitTextToSize(c.title.replace(/\n/g, ' ').replace(/  +/g, ' '), contentWidth);
+                            titleLines.forEach(line => {
+                                checkPage(5);
+                                doc.text(line, margin, y);
+                                y += 5;
+                            });
+                            addParagraph(c.challenge);
+                            checkPage(8);
+                            doc.setFontSize(10);
+                            doc.setTextColor(...colors.accentDark);
+                            doc.setFont('helvetica', 'bold');
+                            doc.text('Remedy:', margin, y);
+                            y += 5;
+                            doc.setFont('helvetica', 'normal');
+                            addParagraph(c.remedy);
+                        });
+                    }
+
+                    // Secret
+                    if (profile.secret) {
+                        addSectionHeader('The Secret You\'ve Carried');
+                        addLongText(profile.secret);
+                    }
+
+                    // What Others Get Wrong
+                    if (profile.whatOthersGetWrong) {
+                        addSectionHeader('What Others Get Wrong');
+                        addLongText(profile.whatOthersGetWrong);
+                    }
+
+                    // Hidden Superpower
+                    if (profile.hiddenSuperpower) {
+                        addSectionHeader('Your Hidden Superpower');
+                        addLongText(profile.hiddenSuperpower);
+                    }
+
+                    // Blind Spot
+                    if (profile.blindSpot) {
+                        addSectionHeader('Your Blind Spot');
+                        addLongText(profile.blindSpot);
+                    }
+
+                    // Friction Patterns
+                    if (profile.frictionPatterns) {
+                        addSectionHeader('Friction Patterns');
+                        addLongText(profile.frictionPatterns);
+                    }
+
+                    // Energy Patterns
+                    if (profile.energyPatterns) {
+                        addSectionHeader('Energy Patterns');
+                        const parts = profile.energyPatterns.split(/Drains:/i);
+                        const energizes = parts[0].replace(/Energizes:/i, '').trim();
+                        const drains = parts[1] ? parts[1].trim() : '';
+                        if (energizes) {
+                            checkPage(10);
+                            doc.setFontSize(11);
+                            doc.setTextColor(...colors.accent);
+                            doc.setFont('helvetica', 'bold');
+                            doc.text('\u26A1 Energizes:', margin, y);
+                            y += 6;
+                            energizes.split('\u2022').filter(i => i.trim()).forEach(item => addBulletItem(item));
+                            y += 3;
+                        }
+                        if (drains) {
+                            checkPage(10);
+                            doc.setFontSize(11);
+                            doc.setTextColor(...colors.purple);
+                            doc.setFont('helvetica', 'bold');
+                            doc.text('\u26A0 Drains:', margin, y);
+                            y += 6;
+                            drains.split('\u2022').filter(i => i.trim()).forEach(item => addBulletItem(item));
+                        }
+                    }
+
+                    // Work Environments
+                    if (profile.workEnvironments) {
+                        addSectionHeader('Optimal Work Environments');
+                        addLongText(profile.workEnvironments);
+                    }
+
+                    // Block Indicators
+                    if (profile.blockIndicators) {
+                        addSectionHeader('Cognitive Block Indicators');
+                        const sections = profile.blockIndicators.split('\n\n').filter(p => p.trim());
+                        sections.forEach(section => {
+                            if (section.includes('\u2022')) {
+                                section.split('\u2022').filter(l => l.trim()).forEach(item => addBulletItem(item));
+                            } else {
+                                const isBold = section.includes(':');
+                                if (isBold) {
+                                    checkPage(6);
+                                    doc.setFontSize(10);
+                                    doc.setTextColor(...colors.textDark);
+                                    doc.setFont('helvetica', 'bold');
+                                    const lines = doc.splitTextToSize(section.replace(/\n/g, ' ').replace(/  +/g, ' '), contentWidth);
+                                    lines.forEach(line => {
+                                        checkPage(5);
+                                        doc.text(line, margin, y);
+                                        y += 4.8;
+                                    });
+                                    y += 2;
+                                } else {
+                                    addParagraph(section);
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // === FOOTER ===
+                checkPage(25);
+                y += 8;
+
+                // Footer divider
+                doc.setDrawColor(...colors.accent);
+                doc.setLineWidth(0.5);
+                doc.line(margin + 25, y, pageWidth - margin - 25, y);
+                y += 8;
+
+                // Footer background
+                doc.setFillColor(250, 250, 252);
+                doc.rect(margin, y - 4, contentWidth, 22, 'F');
+
+                doc.setFontSize(9);
+                doc.setTextColor(...colors.textMuted);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Parser Profile\u2122 \u00A9 2026 Cognition Blocks LLC. All rights reserved.', pageWidth / 2, y + 2, { align: 'center' });
+                y += 5;
+                doc.setFont('helvetica', 'normal');
+                doc.text('U.S. Copyright TXu 2-497-721', pageWidth / 2, y + 2, { align: 'center' });
+                y += 5;
+                doc.setFontSize(8);
+                doc.text('For personal use only. Reproduction or redistribution prohibited without written permission.', pageWidth / 2, y + 2, { align: 'center' });
+                y += 5;
+                doc.setTextColor(...colors.accent);
+                doc.text('cognitionblocksllc.com/terms', pageWidth / 2, y + 2, { align: 'center' });
+
+                // Save/download
+                const filename = `Parser-Profile-${currentProfile.name}.pdf`;
+                doc.save(filename);
+
+            } catch (e) {
+                console.error('PDF generation error:', e);
+                alert('PDF generation failed: ' + e.message);
+            }
+        }
+
+        // Legacy helper stubs (no longer used, kept for compatibility)
+        function generatePDFSection() { return ''; }
+        function generatePDFStrengths() { return ''; }
+        function generatePDFChallenges() { return ''; }
+        function generatePDFFriction() { return ''; }
+        function generatePDFEnergy() { return ''; }
+        function generatePDFEnvironments() { return ''; }
+        function generatePDFBlocks() { return ''; }
+
+        // Final initialization check
+        console.log('Parser Assessment: Module fully loaded and ready!');
+        console.log('Parser Assessment: Available functions:', {
+            startAssessment: typeof window.startAssessment,
+            showResults: typeof window.showResults,
+            openPaymentModal: typeof window.openPaymentModal
+        });
+    </script>
+</body>
+</html>

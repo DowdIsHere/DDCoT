@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contains secrets)
+.env
+
+# User accounts (contains hashed passwords)
+accounts.json
+
+# Sequential customer ID counter
+counter.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE
+.vscode/
+.idea/
