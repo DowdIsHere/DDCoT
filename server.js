@@ -16,7 +16,7 @@ const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 const FREE_MODE = process.env.FREE_MODE === 'true';
 
 if (!ANTHROPIC_API_KEY) {
-  console.warn('[boot] ANTHROPIC_API_KEY is not set — /api/anthropic will fail until configured.');
+  console.warn('[boot] ANTHROPIC_API_KEY is not set — /api/translate will fail until configured.');
 }
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.warn('[boot] SUPABASE_URL / SUPABASE_ANON_KEY not set — auth verification will fail.');
@@ -53,7 +53,7 @@ const PACKS = {
   pro:      { priceId: process.env.STRIPE_PRICE_PRO,      credits: 700, label: 'Pro'      },
 };
 
-// Pricing for Claude Sonnet 4 — used to record per-transform cost
+// Pricing for Claude Sonnet 4 — used to record per-translate cost
 const PRICING = { inputPerMTok: 3, outputPerMTok: 15 };
 const costFor = (inputTokens, outputTokens) =>
   (inputTokens / 1_000_000) * PRICING.inputPerMTok +
@@ -193,9 +193,8 @@ app.post('/api/checkout', requireAuth, async (req, res) => {
         credits: String(config.credits),
         pack
       },
-      // Make this visible to Stripe in receipts
       payment_intent_data: {
-        description: `DDCoT — ${config.label} pack (${config.credits} credits)`
+        description: `MyReader — ${config.label} pack (${config.credits} credits)`
       }
     });
 
@@ -206,7 +205,35 @@ app.post('/api/checkout', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/anthropic', requireAuth, async (req, res) => {
+// ── Translation Prompt Builder ──────────────────────────────────
+
+function buildTranslationPrompt(text, sourceLang, targetLang, mode) {
+  const modeInstructions = {
+    selection: `Translate the following text selection from ${sourceLang} to ${targetLang}. Provide ONLY the translated text, no explanations or notes.`,
+    paragraph: `Translate the following paragraph from ${sourceLang} to ${targetLang}. Preserve the paragraph structure and tone. Provide ONLY the translated text.`,
+    full: `Translate the following complete document from ${sourceLang} to ${targetLang}. Preserve the original paragraph structure, formatting, and tone throughout. Maintain consistency in terminology across the entire document. Output ONLY the translated text, preserving paragraph breaks.`,
+  };
+
+  return `You are a professional translator for MyReader, a premium translation e-reader.
+
+${modeInstructions[mode] || modeInstructions.selection}
+
+Rules:
+1. Translate naturally and fluently — prioritize readability over literal translation.
+2. Preserve the author's tone, style, and intent.
+3. Keep proper nouns, technical terms, and brand names in their original form unless they have well-known translations.
+4. Maintain paragraph breaks and text structure.
+5. If the source language is "auto-detect", identify the language and translate from it.
+6. Output ONLY the translation — no commentary, no "Here is the translation:", no notes.
+
+Text to translate:
+---
+${text}
+---`;
+}
+
+// POST /api/translate — AI-powered translation via Claude
+app.post('/api/translate', requireAuth, async (req, res) => {
   if (!ANTHROPIC_API_KEY) {
     return res.status(500).json({ error: 'Anthropic API key not configured on server' });
   }
@@ -215,6 +242,101 @@ app.post('/api/anthropic', requireAuth, async (req, res) => {
   }
 
   // Credit gate: skip entirely in FREE_MODE.
+  let newBalance = null;
+  if (!FREE_MODE) {
+    const { data: creditData, error: creditError } = await supabaseAdmin
+      .rpc('use_credit', { p_user_id: req.user.id });
+
+    if (creditError) {
+      console.error('use_credit error:', creditError);
+      return res.status(500).json({ error: 'Credit check failed' });
+    }
+
+    const row = Array.isArray(creditData) ? creditData[0] : creditData;
+    if (!row?.ok) {
+      return res.status(402).json({
+        error: 'Out of credits — please purchase more to continue',
+        balance: row?.new_balance ?? 0
+      });
+    }
+    newBalance = row.new_balance;
+  }
+
+  const { text, sourceLang, targetLang, mode } = req.body || {};
+
+  if (!text?.trim()) {
+    return res.status(400).json({ error: 'No text provided for translation' });
+  }
+
+  const prompt = buildTranslationPrompt(
+    text.slice(0, 30000), // Cap input size
+    sourceLang || 'auto-detect',
+    targetLang || 'English',
+    mode || 'selection'
+  );
+
+  const anthropicBody = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: mode === 'full' ? 16384 : 4096,
+    messages: [{ role: 'user', content: prompt }],
+  };
+
+  let anthropicResponse;
+  try {
+    anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(anthropicBody)
+    });
+  } catch (error) {
+    console.error('Anthropic fetch error:', error);
+    if (!FREE_MODE) {
+      await supabaseAdmin.rpc('refund_credit', { p_user_id: req.user.id });
+    }
+    return res.status(502).json({ error: 'Failed to reach Anthropic API' });
+  }
+
+  const data = await anthropicResponse.json();
+
+  if (!anthropicResponse.ok) {
+    if (!FREE_MODE) {
+      await supabaseAdmin.rpc('refund_credit', { p_user_id: req.user.id });
+    }
+    return res.status(anthropicResponse.status).json(data);
+  }
+
+  // Log the translation for cost/abuse monitoring
+  if (supabaseAdmin) {
+    const usage = data.usage || {};
+    const inputTokens = usage.input_tokens || 0;
+    const outputTokens = usage.output_tokens || 0;
+    const cost = costFor(inputTokens, outputTokens);
+
+    await supabaseAdmin.from('transforms').insert({
+      user_id: req.user.id,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      cost_usd: cost,
+      profile_name: `translate_${mode}_${(targetLang || 'en').toLowerCase()}`
+    });
+  }
+
+  res.json({ ...data, balance: newBalance });
+});
+
+// Legacy endpoint — kept for backward compatibility
+app.post('/api/anthropic', requireAuth, async (req, res) => {
+  if (!ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'Anthropic API key not configured on server' });
+  }
+  if (!FREE_MODE && !supabaseAdmin) {
+    return res.status(500).json({ error: 'Server not configured' });
+  }
+
   let newBalance = null;
   if (!FREE_MODE) {
     const { data: creditData, error: creditError } = await supabaseAdmin
@@ -265,7 +387,6 @@ app.post('/api/anthropic', requireAuth, async (req, res) => {
     return res.status(anthropicResponse.status).json(data);
   }
 
-  // Always log the transform for cost/abuse monitoring, even in FREE_MODE.
   if (supabaseAdmin) {
     const usage = data.usage || {};
     const inputTokens = usage.input_tokens || 0;
@@ -289,5 +410,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`MyReader server running on port ${PORT}`);
 });

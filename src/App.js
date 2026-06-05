@@ -1,7 +1,14 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { supabase } from './supabaseClient';
+import './App.css';
 
-// The 27 CBI Profiles - Robert's actual mappings
+// ═══════════════════════════════════════════════════════════════
+// MyReader — Premium Cognitive Translation E-Reader
+// The 27 CBI Profiles ARE the translation engine.
+// ═══════════════════════════════════════════════════════════════
+
+// ── The 27 CBI Profiles — Robert's actual mappings ──────────
+
 const PROFILES = {
   // Concrete + Past
   SHARP: { spatial: [0, 33], temporal: [0, 33], reference: [67, 100],
@@ -76,204 +83,72 @@ const PROFILES = {
     description: "Abstract • Future • Other" },
 };
 
-// Gradient labels
 const GRADIENT_LABELS = {
   spatial: { low: "Concrete", mid: "Balanced", high: "Abstract" },
   temporal: { low: "Past", mid: "Present", high: "Future" },
   reference: { low: "Other", mid: "Balanced", high: "Self" }
 };
 
-// Claude Sonnet 4 pricing (USD per million tokens)
-const PRICING = {
-  inputPerMTok: 3,
-  outputPerMTok: 15,
-};
+// ── Pricing ─────────────────────────────────────────────────
 
-// Rough token estimate: ~4 chars/token for English prose.
+const PRICING = { inputPerMTok: 3, outputPerMTok: 15 };
 const estimateTokens = (text) => Math.ceil((text || '').length / 4);
-
+const costFor = (inputTokens, outputTokens) =>
+  (inputTokens / 1_000_000) * PRICING.inputPerMTok +
+  (outputTokens / 1_000_000) * PRICING.outputPerMTok;
 const formatCost = (usd) => {
   if (usd < 0.01) return `<$0.01`;
   if (usd < 1) return `$${usd.toFixed(3)}`;
   return `$${usd.toFixed(2)}`;
 };
 
-const costFor = (inputTokens, outputTokens) =>
-  (inputTokens / 1_000_000) * PRICING.inputPerMTok +
-  (outputTokens / 1_000_000) * PRICING.outputPerMTok;
+// ── Font & Theme Options ────────────────────────────────────
 
-function CognitiveModifier() {
-  const [spatial, setSpatial] = useState(50);
-  const [temporal, setTemporal] = useState(50);
-  const [reference, setReference] = useState(50);
-  const [inputText, setInputText] = useState('');
-  const [modifiedText, setModifiedText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [changes, setChanges] = useState([]);
-  const [error, setError] = useState('');
-  const [lastUsage, setLastUsage] = useState(null);
-  const [sessionUsage, setSessionUsage] = useState({ inputTokens: 0, outputTokens: 0, calls: 0 });
+const FONT_OPTIONS = [
+  { key: 'literata', label: 'Literata', family: "'Literata', Georgia, serif" },
+  { key: 'merriweather', label: 'Merriweather', family: "'Merriweather', Georgia, serif" },
+  { key: 'inter', label: 'Inter', family: "'Inter', system-ui, sans-serif" },
+  { key: 'system', label: 'System', family: "system-ui, -apple-system, sans-serif" },
+];
 
-  // Auth + credits
-  const [session, setSession] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [balance, setBalance] = useState(null);
-  const [overageLimit, setOverageLimit] = useState(-5);
-  const [freeMode, setFreeMode] = useState(false);
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup'
-  const [authBusy, setAuthBusy] = useState(false);
-  const [authMessage, setAuthMessage] = useState('');
-  const [packs, setPacks] = useState(null);
-  const [checkoutBusy, setCheckoutBusy] = useState(null);
-  const [checkoutMessage, setCheckoutMessage] = useState('');
+const THEMES = [
+  { key: 'dark', label: 'Dark' },
+  { key: 'light', label: 'Light' },
+  { key: 'sepia', label: 'Sepia' },
+];
 
-  const fetchBalance = useCallback(async (accessToken) => {
-    if (!accessToken) return;
-    try {
-      const res = await fetch('/api/credits', {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.free_mode) {
-          setFreeMode(true);
-          setBalance(null);
-        } else {
-          setFreeMode(false);
-          setBalance(data.balance);
-          setOverageLimit(data.overage_limit ?? -5);
-        }
-      }
-    } catch (e) {
-      // network blip — leave existing balance, don't surface
-    }
-  }, []);
+// ── Persistence ─────────────────────────────────────────────
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setAuthChecked(true);
-      if (s?.access_token) fetchBalance(s.access_token);
-    });
+function loadSettings() {
+  try { const s = localStorage.getItem('myreader-settings'); return s ? JSON.parse(s) : null; } catch { return null; }
+}
+function saveSettings(s) {
+  try { localStorage.setItem('myreader-settings', JSON.stringify(s)); } catch {}
+}
+function loadLibrary() {
+  try { const s = localStorage.getItem('myreader-library'); return s ? JSON.parse(s) : []; } catch { return []; }
+}
+function saveLibrary(l) {
+  try { localStorage.setItem('myreader-library', JSON.stringify(l)); } catch {}
+}
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      if (s?.access_token) fetchBalance(s.access_token);
-      else setBalance(null);
-    });
+// ── Cognitive Translation Prompt Builder ────────────────────
+// This is the CORE of MyReader — translating content into the
+// reader's cognitive reception register.
 
-    // Fetch pack catalog (public endpoint). Ignore in free mode.
-    fetch('/api/packs')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data) return;
-        if (data.free_mode) setPacks(null);
-        else setPacks(data);
-      })
-      .catch(() => {});
-
-    // Handle return from Stripe checkout
-    const params = new URLSearchParams(window.location.search);
-    const checkoutStatus = params.get('checkout');
-    if (checkoutStatus === 'success') {
-      setCheckoutMessage('Payment received — credits will appear momentarily.');
-      // Refresh balance a few times; webhook may take a second to land
-      const refresh = (delay) => setTimeout(async () => {
-        const { data: { session: s } } = await supabase.auth.getSession();
-        if (s?.access_token) fetchBalance(s.access_token);
-      }, delay);
-      refresh(500); refresh(2000); refresh(5000);
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (checkoutStatus === 'cancel') {
-      setCheckoutMessage('Checkout canceled — no charge.');
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-
-    return () => subscription.unsubscribe();
-  }, [fetchBalance]);
-
-  const handleBuyPack = async (packKey) => {
-    if (!session?.access_token) return;
-    setCheckoutBusy(packKey);
-    setCheckoutMessage('');
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ pack: packKey })
-      });
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        throw new Error(data.error || 'Checkout failed');
-      }
-      window.location.href = data.url;
-    } catch (err) {
-      setCheckoutMessage(err.message || 'Checkout failed');
-      setCheckoutBusy(null);
-    }
-  };
-
-  const handleSignIn = async (e) => {
-    e?.preventDefault();
-    setAuthBusy(true);
-    setAuthMessage('');
-    const { error: authErr } = authMode === 'signup'
-      ? await supabase.auth.signUp({ email: authEmail, password: authPassword })
-      : await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
-    setAuthBusy(false);
-    if (authErr) {
-      setAuthMessage(authErr.message);
-    } else if (authMode === 'signup') {
-      setAuthMessage('Check your email to confirm your account, then sign in.');
-    }
-  };
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setBalance(null);
-  };
-
-  // Find matching profile
-  const matchedProfile = useMemo(() => {
-    for (const [name, config] of Object.entries(PROFILES)) {
-      const spatialMatch = spatial >= config.spatial[0] && spatial <= config.spatial[1];
-      const temporalMatch = temporal >= config.temporal[0] && temporal <= config.temporal[1];
-      const referenceMatch = reference >= config.reference[0] && reference <= config.reference[1];
-
-      if (spatialMatch && temporalMatch && referenceMatch) {
-        return { name, ...config };
-      }
-    }
-    return null;
-  }, [spatial, temporal, reference]);
-
-  const getPositionLabel = (value, gradient) => {
+function buildTransformationPrompt(content, targetProfile, spatialScore, temporalScore, referenceScore) {
+  const getLabel = (value, gradient) => {
     const labels = GRADIENT_LABELS[gradient];
     if (value <= 33) return labels.low;
     if (value <= 66) return labels.mid;
     return labels.high;
   };
 
-  const getProfileColor = (name) => {
-    const profile = PROFILES[name];
-    if (!profile) return '#666';
-    if (profile.spatial[1] <= 33) return '#22c55e';
-    if (profile.spatial[0] >= 67) return '#a855f7';
-    return '#3b82f6';
-  };
+  const spatialLabel = getLabel(spatialScore, 'spatial');
+  const temporalLabel = getLabel(temporalScore, 'temporal');
+  const referenceLabel = getLabel(referenceScore, 'reference');
 
-  // Build the transformation prompt
-  const buildTransformationPrompt = (content, targetProfile, spatialScore, temporalScore, referenceScore) => {
-    const spatialLabel = getPositionLabel(spatialScore, 'spatial');
-    const temporalLabel = getPositionLabel(temporalScore, 'temporal');
-    const referenceLabel = getPositionLabel(referenceScore, 'reference');
-
-    return `You are a Cognitive Architecture Information Modifier operating in TRANSLATE mode. Your job is to re-voice an existing source so it reads in the reception register (the reader's gradient configuration) that best fits this reader — re-orienting how the source is received, never performing the cognition that happens downstream.
+  return `You are a Cognitive Architecture Information Modifier operating in TRANSLATE mode. Your job is to re-voice an existing source so it reads in the reception register (the reader's gradient configuration) that best fits this reader — re-orienting how the source is received, never performing the cognition that happens downstream.
 
 TARGET PROFILE: ${targetProfile}
 - Spatial Processing: ${spatialLabel} (${spatialScore}/100)
@@ -405,60 +280,279 @@ ${content}
 Translate this content into the target cognitive register using the rules above. Restructure, reframe, and rephrase the VOICE — but every fact, claim, number, source, outcome, experience, sensation, and reaction in your output must trace back to the source content. Before any sentence stating that the reader did, saw, felt, or remembered something — or that someone else reacted — confirm the source asserts it; if it does not, cut it. If a rule above would require adding something the source does not contain, drop that rule for that sentence.
 
 Output ONLY the translated content, no explanations or meta-commentary.`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MyReader Component
+// ═══════════════════════════════════════════════════════════════
+
+function MyReader() {
+  // ── Settings ──────────────────────────────────────────────
+  const defaultSettings = {
+    theme: 'dark', fontFamily: 'literata', fontSize: 18,
+    lineHeight: 1.8, readerWidth: 720,
+  };
+  const [settings, setSettings] = useState(() => loadSettings() || defaultSettings);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // ── Sidebar ───────────────────────────────────────────────
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // ── Library ───────────────────────────────────────────────
+  const [library, setLibrary] = useState(() => loadLibrary());
+  const [activeDocId, setActiveDocId] = useState(null);
+
+  // ── Reader ────────────────────────────────────────────────
+  const [readerContent, setReaderContent] = useState('');
+  const [readerTitle, setReaderTitle] = useState('');
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const readerRef = useRef(null);
+
+  // ── Cognitive Profile (THE translation engine) ────────────
+  const [spatial, setSpatial] = useState(50);
+  const [temporal, setTemporal] = useState(50);
+  const [reference, setReference] = useState(50);
+  const [translatedContent, setTranslatedContent] = useState('');
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState('');
+  const [changes, setChanges] = useState([]);
+  const [lastUsage, setLastUsage] = useState(null);
+  const [sessionUsage, setSessionUsage] = useState({ inputTokens: 0, outputTokens: 0, calls: 0 });
+  const [showTranslated, setShowTranslated] = useState(false); // toggle original vs translated
+  const [bilingualMode, setBilingualMode] = useState(false);
+
+  // ── Translation Panel ─────────────────────────────────────
+  const [profilePanelOpen, setProfilePanelOpen] = useState(true);
+
+  // ── Auth + credits ────────────────────────────────────────
+  const [session, setSession] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [balance, setBalance] = useState(null);
+  const [overageLimit, setOverageLimit] = useState(-5);
+  const [freeMode, setFreeMode] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authMode, setAuthMode] = useState('signin');
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMessage, setAuthMessage] = useState('');
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [packs, setPacks] = useState(null);
+  const [checkoutBusy, setCheckoutBusy] = useState(null);
+  const [checkoutMessage, setCheckoutMessage] = useState('');
+
+  // ── Toast ─────────────────────────────────────────────────
+  const [toast, setToast] = useState(null);
+
+  // ── Drag & drop ───────────────────────────────────────────
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // ── Profile matching ──────────────────────────────────────
+
+  const matchedProfile = useMemo(() => {
+    for (const [name, config] of Object.entries(PROFILES)) {
+      const s = spatial >= config.spatial[0] && spatial <= config.spatial[1];
+      const t = temporal >= config.temporal[0] && temporal <= config.temporal[1];
+      const r = reference >= config.reference[0] && reference <= config.reference[1];
+      if (s && t && r) return { name, ...config };
+    }
+    return null;
+  }, [spatial, temporal, reference]);
+
+  const getPositionLabel = (value, gradient) => {
+    const labels = GRADIENT_LABELS[gradient];
+    if (value <= 33) return labels.low;
+    if (value <= 66) return labels.mid;
+    return labels.high;
   };
 
-  // Estimated cost for the next transform (live, before API call)
+  const getProfileColor = (name) => {
+    const profile = PROFILES[name];
+    if (!profile) return '#7c6df0';
+    if (profile.spatial[1] <= 33) return '#4ade80'; // concrete = green
+    if (profile.spatial[0] >= 67) return '#a855f7'; // abstract = purple
+    return '#60a5fa'; // balanced = blue
+  };
+
+  // ── Estimated cost ────────────────────────────────────────
+
   const estimatedCost = useMemo(() => {
-    if (!inputText.trim()) return null;
-    const prompt = buildTransformationPrompt(
-      inputText,
-      'PREVIEW',
-      spatial,
-      temporal,
-      reference
-    );
-    const inputTokens = estimateTokens(prompt);
-    // Output tokens roughly track input content length; transforms reframe, not summarize.
-    const outputTokens = Math.min(estimateTokens(inputText), 8192);
-    return {
-      inputTokens,
-      outputTokens,
-      usd: costFor(inputTokens, outputTokens),
-    };
+    if (!readerContent.trim()) return null;
+    const prompt = buildTransformationPrompt(readerContent, 'PREVIEW', spatial, temporal, reference);
+    const inTok = estimateTokens(prompt);
+    const outTok = Math.min(estimateTokens(readerContent), 8192);
+    return { inputTokens: inTok, outputTokens: outTok, usd: costFor(inTok, outTok) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputText, spatial, temporal, reference]);
+  }, [readerContent, spatial, temporal, reference]);
 
-  // Call Claude API via our server (server holds the Anthropic key)
-  const transformWithAPI = async () => {
-    if (!inputText.trim()) {
-      setError('Please enter content to transform');
-      return;
+  // ── Effects ───────────────────────────────────────────────
+
+  useEffect(() => { document.documentElement.setAttribute('data-theme', settings.theme); saveSettings(settings); }, [settings]);
+  useEffect(() => { saveLibrary(library); }, [library]);
+
+  useEffect(() => {
+    const el = readerRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      setScrollProgress(scrollHeight > clientHeight ? (scrollTop / (scrollHeight - clientHeight)) * 100 : 0);
+    };
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [readerContent, translatedContent, showTranslated]);
+
+  // ── Auth ──────────────────────────────────────────────────
+
+  const fetchBalance = useCallback(async (accessToken) => {
+    if (!accessToken) return;
+    try {
+      const res = await fetch('/api/credits', { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.free_mode) { setFreeMode(true); setBalance(null); }
+        else { setFreeMode(false); setBalance(data.balance); setOverageLimit(data.overage_limit ?? -5); }
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s); setAuthChecked(true);
+      if (s?.access_token) fetchBalance(s.access_token);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s?.access_token) fetchBalance(s.access_token);
+      else setBalance(null);
+    });
+    fetch('/api/packs').then(r => r.ok ? r.json() : null).then(data => {
+      if (!data) return;
+      if (data.free_mode) setPacks(null); else setPacks(data);
+    }).catch(() => {});
+
+    const params = new URLSearchParams(window.location.search);
+    const cs = params.get('checkout');
+    if (cs === 'success') {
+      setCheckoutMessage('Payment received — credits will appear momentarily.');
+      const refresh = (d) => setTimeout(async () => {
+        const { data: { session: s } } = await supabase.auth.getSession();
+        if (s?.access_token) fetchBalance(s.access_token);
+      }, d);
+      refresh(500); refresh(2000); refresh(5000);
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (cs === 'cancel') {
+      setCheckoutMessage('Checkout canceled — no charge.');
+      window.history.replaceState({}, '', window.location.pathname);
     }
+    return () => subscription.unsubscribe();
+  }, [fetchBalance]);
 
-    if (!session?.access_token) {
-      setError('Please sign in to transform content');
-      return;
+  const handleSignIn = async (e) => {
+    e?.preventDefault(); setAuthBusy(true); setAuthMessage('');
+    const { error: authErr } = authMode === 'signup'
+      ? await supabase.auth.signUp({ email: authEmail, password: authPassword })
+      : await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+    setAuthBusy(false);
+    if (authErr) setAuthMessage(authErr.message);
+    else if (authMode === 'signup') setAuthMessage('Check your email to confirm, then sign in.');
+  };
+
+  const handleSignOut = async () => { await supabase.auth.signOut(); setBalance(null); setShowUserMenu(false); };
+
+  const handleBuyPack = async (packKey) => {
+    if (!session?.access_token) return;
+    setCheckoutBusy(packKey); setCheckoutMessage('');
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ pack: packKey })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || 'Checkout failed');
+      window.location.href = data.url;
+    } catch (err) { setCheckoutMessage(err.message || 'Checkout failed'); setCheckoutBusy(null); }
+  };
+
+  // ── File Handling ─────────────────────────────────────────
+
+  const processFile = useCallback(async (file) => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'txt' || ext === 'md') {
+      const text = await file.text();
+      const doc = { id: Date.now().toString(), title: file.name.replace(/\.[^/.]+$/, ''), content: text, type: ext, addedAt: new Date().toISOString(), size: file.size };
+      setLibrary(prev => [doc, ...prev]);
+      openDoc(doc);
+      showToast(`Loaded "${doc.title}"`, 'success');
+    } else if (ext === 'epub') {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const { default: ePub } = await import('epubjs');
+        const book = ePub(arrayBuffer);
+        await book.ready;
+        const title = book.packaging?.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
+        const spine = book.spine;
+        let fullText = '';
+        for (let i = 0; i < spine.items.length; i++) {
+          const section = spine.items[i];
+          const contents = await section.load(book.load.bind(book));
+          const body = contents?.querySelector?.('body');
+          if (body) fullText += body.textContent + '\n\n';
+        }
+        if (!fullText.trim()) { showToast('Could not extract text from EPUB.', 'error'); return; }
+        const doc = { id: Date.now().toString(), title, content: fullText.trim(), type: 'epub', addedAt: new Date().toISOString(), size: file.size };
+        setLibrary(prev => [doc, ...prev]);
+        openDoc(doc);
+        showToast(`Loaded "${doc.title}"`, 'success');
+      } catch (err) { console.error('EPUB parse error:', err); showToast('Failed to parse EPUB', 'error'); }
+    } else {
+      showToast(`Unsupported file type: .${ext}`, 'error');
     }
+  }, []);
 
-    setIsLoading(true);
-    setError('');
-    setChanges([]);
+  const openDoc = (doc) => {
+    setActiveDocId(doc.id); setReaderContent(doc.content); setReaderTitle(doc.title);
+    setScrollProgress(0); setTranslatedContent(''); setShowTranslated(false); setBilingualMode(false);
+    setChanges([]); setTranslationError('');
+    if (readerRef.current) readerRef.current.scrollTop = 0;
+  };
+
+  const deleteDocument = (docId) => {
+    setLibrary(prev => prev.filter(d => d.id !== docId));
+    if (activeDocId === docId) { setActiveDocId(null); setReaderContent(''); setReaderTitle(''); setTranslatedContent(''); }
+  };
+
+  const handlePasteText = () => {
+    const text = prompt('Paste your content to read and translate:');
+    if (text?.trim()) {
+      const doc = { id: Date.now().toString(), title: `Pasted (${new Date().toLocaleTimeString()})`, content: text.trim(), type: 'paste', addedAt: new Date().toISOString(), size: text.length };
+      setLibrary(prev => [doc, ...prev]);
+      openDoc(doc);
+    }
+  };
+
+  const handleFileDrop = useCallback((e) => {
+    e.preventDefault(); setIsDragging(false);
+    const files = e.dataTransfer?.files;
+    if (files?.length) processFile(files[0]);
+  }, [processFile]);
+
+  // ── Cognitive Translation (THE core feature) ──────────────
+
+  const translateWithProfile = async () => {
+    if (!readerContent.trim()) { setTranslationError('Load content first'); return; }
+    if (!session?.access_token) { setTranslationError('Please sign in to translate'); return; }
+
+    setIsTranslating(true); setTranslationError(''); setChanges([]);
 
     const prompt = buildTransformationPrompt(
-      inputText,
-      matchedProfile?.name || 'Unknown',
-      spatial,
-      temporal,
-      reference
+      readerContent, matchedProfile?.name || 'Unknown', spatial, temporal, reference
     );
 
     try {
       const response = await fetch('/api/anthropic', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 8192,
@@ -470,573 +564,516 @@ Output ONLY the translated content, no explanations or meta-commentary.`;
       const data = await response.json();
 
       if (response.status === 402) {
-        setError('Out of credits — buy more to keep transforming.');
+        setTranslationError('Out of credits — buy more to keep translating.');
         if (typeof data.balance === 'number') setBalance(data.balance);
         return;
       }
-      if (response.status === 401) {
-        setError('Your session expired — please sign in again.');
-        return;
-      }
-      if (!response.ok) {
-        throw new Error(data.error?.message || data.error || `API error: ${response.status}`);
-      }
+      if (response.status === 401) { setTranslationError('Session expired — please sign in again.'); return; }
+      if (!response.ok) throw new Error(data.error?.message || data.error || `API error: ${response.status}`);
 
-      const transformedContent = data.content[0].text;
+      const transformed = data.content[0].text;
       const usage = data.usage || {};
-      const inputTokens = usage.input_tokens || 0;
-      const outputTokens = usage.output_tokens || 0;
-      const usd = costFor(inputTokens, outputTokens);
+      const inTok = usage.input_tokens || 0;
+      const outTok = usage.output_tokens || 0;
 
-      setModifiedText(transformedContent);
-      setLastUsage({ inputTokens, outputTokens, usd });
-      setSessionUsage((prev) => ({
-        inputTokens: prev.inputTokens + inputTokens,
-        outputTokens: prev.outputTokens + outputTokens,
-        calls: prev.calls + 1,
-      }));
+      setTranslatedContent(transformed);
+      setShowTranslated(true);
+      setLastUsage({ inputTokens: inTok, outputTokens: outTok, usd: costFor(inTok, outTok) });
+      setSessionUsage(prev => ({ inputTokens: prev.inputTokens + inTok, outputTokens: prev.outputTokens + outTok, calls: prev.calls + 1 }));
       setChanges([
-        `Transformed for ${matchedProfile?.name || 'target'} profile`,
+        `Translated for ${matchedProfile?.name || 'target'} profile`,
         `Spatial: ${getPositionLabel(spatial, 'spatial')} (${spatial})`,
         `Temporal: ${getPositionLabel(temporal, 'temporal')} (${temporal})`,
         `Reference: ${getPositionLabel(reference, 'reference')} (${reference})`
       ]);
-
       if (typeof data.balance === 'number') setBalance(data.balance);
+      showToast(`Translated for ${matchedProfile?.name}`, 'success');
     } catch (err) {
-      console.error('API Error:', err);
-      setError(err.message || 'Failed to transform content');
+      console.error('Translation error:', err);
+      setTranslationError(err.message || 'Translation failed');
     } finally {
-      setIsLoading(false);
+      setIsTranslating(false);
     }
   };
 
-  const SliderControl = ({ label, value, onChange, gradient }) => (
-    <div style={{ marginBottom: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <span style={{ fontWeight: '500' }}>{label}</span>
-        <span style={{ fontWeight: 'bold' }}>
-          {value} - {getPositionLabel(value, gradient)}
-        </span>
-      </div>
-      <input
-        type="range"
-        min="0"
-        max="100"
-        value={value}
-        onChange={(e) => onChange(parseInt(e.target.value))}
-        style={{ width: '100%', cursor: 'pointer' }}
-      />
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#666', marginTop: '4px' }}>
-        <span>{GRADIENT_LABELS[gradient].low}</span>
-        <span>{GRADIENT_LABELS[gradient].mid}</span>
-        <span>{GRADIENT_LABELS[gradient].high}</span>
-      </div>
-    </div>
-  );
+  // ── Toast ─────────────────────────────────────────────────
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  // ── Settings ──────────────────────────────────────────────
+
+  const updateSetting = (key, value) => setSettings(prev => ({ ...prev, [key]: value }));
+  const currentFont = FONT_OPTIONS.find(f => f.key === settings.fontFamily) || FONT_OPTIONS[0];
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  // ── Which content to show ─────────────────────────────────
+
+  const displayContent = showTranslated && translatedContent ? translatedContent : readerContent;
+
+  // ═════════════════════════════════════════════════════════════
+  // RENDER
+  // ═════════════════════════════════════════════════════════════
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#1a1a2e',
-      color: 'white',
-      padding: '20px',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <h1 style={{ textAlign: 'center', marginBottom: '8px', fontSize: '28px' }}>
-          Cognitive Architecture Modifier
-        </h1>
-        <p style={{ textAlign: 'center', color: '#888', marginBottom: '30px' }}>
-          AI-Powered Content Transformation for Any Cognitive Profile
-        </p>
+    <div className="app-shell">
+      {/* ── Header ──────────────────────────────────────── */}
+      <header className="header">
+        <div className="header-left">
+          <button className="icon-btn" onClick={() => setSidebarOpen(!sidebarOpen)} title={sidebarOpen ? 'Close library' : 'Open library'} id="sidebar-toggle">
+            {sidebarOpen ? '◀' : '☰'}
+          </button>
+          <div className="header-brand">
+            <div className="header-brand-icon">📖</div>
+            <span>MyReader</span>
+          </div>
+        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr 1fr', gap: '20px' }}>
+        <div className="header-center">
+          {readerTitle && (
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {readerTitle}
+              {showTranslated && translatedContent && (
+                <span style={{ color: getProfileColor(matchedProfile?.name), marginLeft: 8, fontWeight: 600 }}>
+                  → {matchedProfile?.name}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
 
-          {/* Controls Panel */}
-          <div style={{ backgroundColor: '#252540', borderRadius: '12px', padding: '20px' }}>
-            <h2 style={{ fontSize: '18px', marginBottom: '20px' }}>Target Profile</h2>
+        <div className="header-right">
+          {/* Profile panel toggle */}
+          <button className={`icon-btn ${profilePanelOpen ? 'active' : ''}`} onClick={() => setProfilePanelOpen(!profilePanelOpen)} title="Cognitive Profile" id="profile-toggle">
+            🧠
+          </button>
 
-            {/* Account / Auth Panel */}
-            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#1a1a2e', borderRadius: '8px' }}>
-              {!authChecked ? (
-                <div style={{ fontSize: '12px', color: '#888' }}>Loading…</div>
-              ) : session ? (
-                <>
-                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>Signed in as</div>
-                  <div style={{ fontSize: '13px', marginBottom: '10px', wordBreak: 'break-all' }}>
-                    {session.user?.email}
-                  </div>
-                  {freeMode ? (
-                    <div style={{
-                      marginBottom: '10px',
-                      padding: '8px 10px',
-                      backgroundColor: '#1e3a5c',
-                      border: '1px solid #3b82f6',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      color: '#dbeafe',
-                      textAlign: 'center'
-                    }}>
-                      <strong style={{ color: '#fbbf24' }}>Free access</strong>
-                      <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
-                        Private testing — unlimited transforms
-                      </div>
-                    </div>
-                  ) : (
+          {/* Bilingual toggle */}
+          {translatedContent && (
+            <button className={`icon-btn ${bilingualMode ? 'active' : ''}`} onClick={() => { setBilingualMode(!bilingualMode); setShowTranslated(true); }} title="Side-by-side view" id="bilingual-toggle">
+              📑
+            </button>
+          )}
+
+          {/* View toggle: original / translated */}
+          {translatedContent && !bilingualMode && (
+            <button className={`icon-btn ${showTranslated ? 'active' : ''}`} onClick={() => setShowTranslated(!showTranslated)} title={showTranslated ? 'Show original' : 'Show translated'} id="view-toggle">
+              {showTranslated ? '🔄' : '✨'}
+            </button>
+          )}
+
+          {/* Theme toggle */}
+          <button className="icon-btn" onClick={() => {
+            const t = ['dark', 'light', 'sepia'];
+            updateSetting('theme', t[(t.indexOf(settings.theme) + 1) % t.length]);
+          }} title={`Theme: ${settings.theme}`} id="theme-toggle">
+            {settings.theme === 'dark' ? '🌙' : settings.theme === 'light' ? '☀️' : '📜'}
+          </button>
+
+          {/* Settings */}
+          <button className="icon-btn" onClick={() => setShowSettings(true)} title="Settings" id="settings-btn">⚙️</button>
+
+          {/* Credit badge */}
+          {session && !freeMode && balance != null && (
+            <div className="credit-badge">
+              <span>⚡</span>
+              <span className={`credit-badge-value ${balance > 5 ? 'positive' : balance > 0 ? 'warning' : 'negative'}`}>{balance}</span>
+            </div>
+          )}
+          {session && freeMode && (
+            <div className="credit-badge">
+              <span style={{ color: 'var(--warning)' }}>∞</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Free</span>
+            </div>
+          )}
+
+          {/* User menu */}
+          {authChecked && (
+            <div className="user-menu">
+              <button className="icon-btn" onClick={() => setShowUserMenu(!showUserMenu)} title={session ? session.user?.email : 'Sign in'} id="user-menu-btn">
+                {session ? '👤' : '🔑'}
+              </button>
+              {showUserMenu && (
+                <div className="user-menu-dropdown">
+                  {session ? (
                     <>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '12px', color: '#888' }}>Credits</span>
-                        <span style={{
-                          fontSize: '14px',
-                          fontWeight: 'bold',
-                          color: balance == null ? '#888'
-                            : balance > 0 ? '#66bb6a'
-                            : balance > overageLimit ? '#fbbf24'
-                            : '#ff6666'
-                        }}>
-                          {balance == null ? '—' : balance}
-                        </span>
+                      <div className="user-menu-header">
+                        <div className="user-menu-email">{session.user?.email}</div>
+                        {freeMode && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--warning)', marginTop: 4 }}>Free access — unlimited translations</div>}
                       </div>
-                      {balance != null && balance <= 0 && balance > overageLimit && (
-                        <div style={{ fontSize: '11px', color: '#fbbf24', marginBottom: '8px' }}>
-                          In overage ({Math.abs(balance)} of {Math.abs(overageLimit)})
+                      {!freeMode && packs && (
+                        <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--border-primary)' }}>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-2)' }}>Buy Credits</div>
+                          {['starter', 'standard', 'pro'].map(key => {
+                            const p = packs[key]; if (!p) return null;
+                            return (
+                              <button key={key} onClick={() => handleBuyPack(key)} disabled={!!checkoutBusy} className="user-menu-item" style={{ justifyContent: 'space-between', background: p.popular ? 'var(--accent-glow)' : undefined }}>
+                                <span><strong>{p.label}</strong><span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginLeft: 6 }}>{p.credits} cr</span></span>
+                                <span style={{ fontWeight: 600 }}>{checkoutBusy === key ? '…' : p.price}</span>
+                              </button>
+                            );
+                          })}
+                          {checkoutMessage && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--warning)', padding: '4px 16px' }}>{checkoutMessage}</div>}
                         </div>
                       )}
-                      {balance != null && balance <= overageLimit && (
-                        <div style={{ fontSize: '11px', color: '#ff6666', marginBottom: '8px' }}>
-                          Out of credits — buy more to continue
-                        </div>
-                      )}
+                      <button className="user-menu-item" onClick={handleSignOut}><span>🚪</span> Sign out</button>
                     </>
-                  )}
-
-                  {/* Credit packs (hidden in free mode) */}
-                  {!freeMode && packs && (
-                    <div style={{ marginBottom: '10px' }}>
-                      <div style={{ fontSize: '11px', color: '#888', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Buy credits
-                      </div>
-                      {['starter', 'standard', 'pro'].map((key) => {
-                        const p = packs[key];
-                        if (!p) return null;
-                        const isPopular = p.popular;
-                        const isBusy = checkoutBusy === key;
-                        return (
-                          <button
-                            key={key}
-                            onClick={() => handleBuyPack(key)}
-                            disabled={!!checkoutBusy}
-                            style={{
-                              width: '100%',
-                              padding: '8px 10px',
-                              marginBottom: '6px',
-                              backgroundColor: isPopular ? '#3b82f6' : '#333',
-                              border: isPopular ? '1px solid #3b82f6' : '1px solid #444',
-                              borderRadius: '6px',
-                              color: 'white',
-                              cursor: checkoutBusy ? 'wait' : 'pointer',
-                              fontSize: '12px',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center'
-                            }}
-                          >
-                            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                              <span style={{ fontWeight: 'bold' }}>
-                                {p.label}
-                                {isPopular && (
-                                  <span style={{ marginLeft: '6px', fontSize: '9px', color: '#fbbf24' }}>★ Most Popular</span>
-                                )}
-                              </span>
-                              <span style={{ fontSize: '10px', color: isPopular ? '#dbeafe' : '#999' }}>
-                                {p.credits} credits
-                              </span>
-                            </span>
-                            <span style={{ fontWeight: 'bold' }}>
-                              {isBusy ? '…' : p.price}
-                            </span>
-                          </button>
-                        );
-                      })}
-                      {checkoutMessage && (
-                        <div style={{ fontSize: '11px', color: '#fbbf24', marginTop: '4px' }}>
-                          {checkoutMessage}
-                        </div>
-                      )}
+                  ) : (
+                    <div className="auth-panel">
+                      <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>{authMode === 'signup' ? 'Create Account' : 'Sign In'}</div>
+                      <form onSubmit={handleSignIn}>
+                        <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="Email" required className="auth-input" id="auth-email" />
+                        <input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="Password" required minLength={6} className="auth-input" id="auth-password" />
+                        <button type="submit" disabled={authBusy} className="btn btn-primary" style={{ width: '100%', marginBottom: 'var(--space-2)' }} id="auth-submit">
+                          {authBusy ? <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> : (authMode === 'signup' ? 'Sign Up' : 'Sign In')}
+                        </button>
+                        <button type="button" onClick={() => { setAuthMode(authMode === 'signup' ? 'signin' : 'signup'); setAuthMessage(''); }} className="btn btn-ghost" style={{ width: '100%', fontSize: 'var(--text-xs)' }}>
+                          {authMode === 'signup' ? 'Have an account? Sign in' : 'New here? Create account'}
+                        </button>
+                        {authMessage && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--warning)', marginTop: 'var(--space-2)' }}>{authMessage}</div>}
+                      </form>
                     </div>
                   )}
-
-                  <button
-                    onClick={handleSignOut}
-                    style={{
-                      width: '100%',
-                      padding: '6px',
-                      fontSize: '11px',
-                      backgroundColor: '#333',
-                      border: '1px solid #444',
-                      borderRadius: '4px',
-                      color: '#ccc',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Sign out
-                  </button>
-                </>
-              ) : (
-                <form onSubmit={handleSignIn}>
-                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
-                    {authMode === 'signup' ? 'Create account' : 'Sign in'}
-                  </div>
-                  <input
-                    type="email"
-                    value={authEmail}
-                    onChange={(e) => setAuthEmail(e.target.value)}
-                    placeholder="email"
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      marginBottom: '8px',
-                      backgroundColor: '#333',
-                      border: '1px solid #444',
-                      borderRadius: '4px',
-                      color: 'white',
-                      fontSize: '12px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                  <input
-                    type="password"
-                    value={authPassword}
-                    onChange={(e) => setAuthPassword(e.target.value)}
-                    placeholder="password"
-                    required
-                    minLength={6}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      marginBottom: '8px',
-                      backgroundColor: '#333',
-                      border: '1px solid #444',
-                      borderRadius: '4px',
-                      color: 'white',
-                      fontSize: '12px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={authBusy}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      backgroundColor: authBusy ? '#444' : '#3b82f6',
-                      border: 'none',
-                      borderRadius: '4px',
-                      color: 'white',
-                      cursor: authBusy ? 'wait' : 'pointer',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      marginBottom: '6px'
-                    }}
-                  >
-                    {authBusy ? '…' : (authMode === 'signup' ? 'Sign up' : 'Sign in')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setAuthMode(authMode === 'signup' ? 'signin' : 'signup'); setAuthMessage(''); }}
-                    style={{
-                      width: '100%',
-                      padding: '4px',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      color: '#888',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      textDecoration: 'underline'
-                    }}
-                  >
-                    {authMode === 'signup' ? 'Have an account? Sign in' : 'New here? Create account'}
-                  </button>
-                  {authMessage && (
-                    <div style={{ fontSize: '11px', color: '#fbbf24', marginTop: '6px' }}>
-                      {authMessage}
-                    </div>
-                  )}
-                </form>
+                </div>
               )}
             </div>
+          )}
+        </div>
+      </header>
 
-            <SliderControl
-              label="Spatial"
-              value={spatial}
-              onChange={setSpatial}
-              gradient="spatial"
-            />
+      {/* ── Main Content ──────────────────────────────── */}
+      <div className="main-content">
 
-            <SliderControl
-              label="Temporal"
-              value={temporal}
-              onChange={setTemporal}
-              gradient="temporal"
-            />
-
-            <SliderControl
-              label="Reference"
-              value={reference}
-              onChange={setReference}
-              gradient="reference"
-            />
-
-            {/* Matched Profile */}
-            {matchedProfile && (
-              <div style={{
-                marginTop: '20px',
-                padding: '15px',
-                borderRadius: '8px',
-                border: `2px solid ${getProfileColor(matchedProfile.name)}`,
-                backgroundColor: `${getProfileColor(matchedProfile.name)}20`
-              }}>
-                <div style={{ fontSize: '12px', color: '#888' }}>Target Profile</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: getProfileColor(matchedProfile.name) }}>
-                  {matchedProfile.name}
-                </div>
-                <div style={{ fontSize: '12px', color: '#aaa', marginTop: '8px' }}>
-                  {matchedProfile.description}
-                </div>
+        {/* ── Sidebar / Library ─────────────────────── */}
+        <aside className={`sidebar ${sidebarOpen ? '' : 'collapsed'}`}>
+          {sidebarOpen && (
+            <>
+              <div className="sidebar-header">
+                <div className="sidebar-title">📚 Library</div>
               </div>
-            )}
+              <div className="sidebar-content">
+                <div className={`upload-zone ${isDragging ? 'dragover' : ''}`}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleFileDrop}
+                >
+                  <div className="upload-zone-icon">📄</div>
+                  <div className="upload-zone-text">Drop file or click</div>
+                  <div className="upload-zone-hint">TXT, EPUB</div>
+                </div>
+                <input ref={fileInputRef} type="file" accept=".txt,.md,.epub" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) processFile(e.target.files[0]); }} />
+                <button className="btn btn-secondary" style={{ width: '100%', marginBottom: 'var(--space-4)' }} onClick={handlePasteText}>📋 Paste Text</button>
 
-            {/* Quick Profile Buttons */}
-            <div style={{ marginTop: '20px' }}>
-              <div style={{ fontSize: '12px', color: '#888', marginBottom: '10px' }}>Quick Select</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {['VISIONARY', 'SHARP', 'GROUNDED', 'LEGACY', 'ALTRUISTIC', 'ATTUNED', 'INTROSPECTIVE'].map(name => (
-                  <button
-                    key={name}
-                    onClick={() => {
+                {library.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: 'var(--space-6) 0', color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
+                    Your library is empty.<br />Upload or paste content to start reading.
+                  </div>
+                )}
+                {library.map(doc => (
+                  <div key={doc.id} className={`library-item ${activeDocId === doc.id ? 'active' : ''}`} onClick={() => openDoc(doc)}>
+                    <div className="library-item-icon">{doc.type === 'epub' ? '📕' : doc.type === 'paste' ? '📋' : '📄'}</div>
+                    <div className="library-item-info">
+                      <div className="library-item-title">{doc.title}</div>
+                      <div className="library-item-meta">{formatFileSize(doc.size)} · {doc.type.toUpperCase()}</div>
+                    </div>
+                    <button className="library-item-delete" onClick={e => { e.stopPropagation(); deleteDocument(doc.id); }} title="Remove">×</button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </aside>
+
+        {/* ── Reader Pane ──────────────────────────── */}
+        <div className="reader-pane"
+          onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleFileDrop}
+        >
+          {readerContent && (
+            <div className="reading-progress">
+              <div className="reading-progress-bar" style={{ width: `${scrollProgress}%` }} />
+            </div>
+          )}
+
+          {readerContent ? (
+            <div className="reader-content" ref={readerRef}>
+              {bilingualMode && translatedContent ? (
+                <div style={{ maxWidth: settings.readerWidth * 2 + 48, width: '100%' }}>
+                  <div className="bilingual-view">
+                    <div className="bilingual-column original">
+                      <div className="bilingual-label">Original</div>
+                      <div className="reader-text" style={{ fontFamily: currentFont.family, fontSize: settings.fontSize, lineHeight: settings.lineHeight }}>
+                        {readerContent.split('\n').map((p, i) => p.trim() ? <p key={i}>{p}</p> : null)}
+                      </div>
+                    </div>
+                    <div className="bilingual-column translated">
+                      <div className="bilingual-label" style={{ color: getProfileColor(matchedProfile?.name) }}>
+                        {matchedProfile?.name} — {matchedProfile?.description}
+                      </div>
+                      <div className="reader-text" style={{ fontFamily: currentFont.family, fontSize: settings.fontSize, lineHeight: settings.lineHeight }}>
+                        {translatedContent.split('\n').map((p, i) => p.trim() ? <p key={i}>{p}</p> : null)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="reader-content-inner" style={{ maxWidth: settings.readerWidth }}>
+                  <div className="reader-text" style={{ fontFamily: currentFont.family, fontSize: settings.fontSize, lineHeight: settings.lineHeight }}>
+                    {displayContent.split('\n').map((p, i) => p.trim() ? <p key={i}>{p}</p> : null)}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="welcome-state">
+              <div className="welcome-icon">📖</div>
+              <h1 className="welcome-title">Welcome to MyReader</h1>
+              <p className="welcome-subtitle">
+                A premium AI-powered cognitive translation e-reader. Upload content, set your cognitive profile, and read everything translated into your personal reception register.
+              </p>
+              <div className="welcome-actions">
+                <button className="btn btn-primary btn-lg" onClick={() => fileInputRef.current?.click()}>📄 Upload File</button>
+                <button className="btn btn-secondary btn-lg" onClick={handlePasteText}>📋 Paste Text</button>
+              </div>
+              <div className="welcome-feature-grid">
+                <div className="welcome-feature"><div className="welcome-feature-icon">🧠</div><div className="welcome-feature-label">27 Cognitive Profiles</div></div>
+                <div className="welcome-feature"><div className="welcome-feature-icon">📑</div><div className="welcome-feature-label">Side-by-Side View</div></div>
+                <div className="welcome-feature"><div className="welcome-feature-icon">📚</div><div className="welcome-feature-label">EPUB & TXT</div></div>
+              </div>
+            </div>
+          )}
+
+          {isDragging && (
+            <div style={{ position: 'absolute', inset: 0, background: 'var(--accent-glow)', border: '3px dashed var(--accent-primary)', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, backdropFilter: 'blur(4px)' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 48, marginBottom: 'var(--space-3)' }}>📄</div>
+                <div style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--accent-primary)' }}>Drop to open</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Cognitive Profile Panel ──────────────── */}
+        {profilePanelOpen && (
+          <div className="translation-panel">
+            <div className="translation-panel-header">
+              <div className="translation-panel-title">🧠 Cognitive Profile</div>
+              <button className="icon-btn" onClick={() => setProfilePanelOpen(false)}>✕</button>
+            </div>
+
+            <div className="translation-content" style={{ padding: 'var(--space-4)' }}>
+              {/* Sliders */}
+              {[
+                { label: 'Spatial', value: spatial, set: setSpatial, gradient: 'spatial' },
+                { label: 'Temporal', value: temporal, set: setTemporal, gradient: 'temporal' },
+                { label: 'Reference', value: reference, set: setReference, gradient: 'reference' },
+              ].map(({ label, value, set, gradient }) => (
+                <div key={gradient} style={{ marginBottom: 'var(--space-5)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-secondary)' }}>{label}</span>
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {value} — {getPositionLabel(value, gradient)}
+                    </span>
+                  </div>
+                  <div className="settings-slider">
+                    <input type="range" min="0" max="100" value={value} onChange={e => set(parseInt(e.target.value))} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>
+                    <span>{GRADIENT_LABELS[gradient].low}</span>
+                    <span>{GRADIENT_LABELS[gradient].mid}</span>
+                    <span>{GRADIENT_LABELS[gradient].high}</span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Matched profile */}
+              {matchedProfile && (
+                <div style={{ padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', border: `2px solid ${getProfileColor(matchedProfile.name)}`, background: `${getProfileColor(matchedProfile.name)}15`, marginBottom: 'var(--space-4)', animation: 'fadeIn var(--transition-fast) ease-out' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Target Profile</div>
+                  <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: getProfileColor(matchedProfile.name) }}>{matchedProfile.name}</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: 'var(--space-1)' }}>{matchedProfile.description}</div>
+                </div>
+              )}
+
+              {/* Quick select */}
+              <div style={{ marginBottom: 'var(--space-4)' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quick Select</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-1)' }}>
+                  {['VISIONARY', 'SHARP', 'GROUNDED', 'LEGACY', 'ALTRUISTIC', 'ATTUNED', 'INTROSPECTIVE', 'EMBODIED', 'EQUANIMOUS'].map(name => (
+                    <button key={name} onClick={() => {
                       const p = PROFILES[name];
                       setSpatial(Math.round((p.spatial[0] + p.spatial[1]) / 2));
                       setTemporal(Math.round((p.temporal[0] + p.temporal[1]) / 2));
                       setReference(Math.round((p.reference[0] + p.reference[1]) / 2));
-                    }}
-                    style={{
-                      padding: '6px 10px',
-                      fontSize: '11px',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      backgroundColor: matchedProfile?.name === name ? getProfileColor(name) : '#333',
-                      color: 'white'
-                    }}
-                  >
-                    {name}
-                  </button>
-                ))}
+                    }} className={`btn btn-sm ${matchedProfile?.name === name ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ fontSize: 'var(--text-xs)' }}>
+                      {name}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Cost Estimate */}
-            <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#1a1a2e', borderRadius: '8px', fontSize: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '6px' }}>
-                <span>Estimated cost (this run)</span>
-                <span style={{ color: estimatedCost ? '#fbbf24' : '#555', fontWeight: 'bold' }}>
-                  {estimatedCost ? formatCost(estimatedCost.usd) : '—'}
-                </span>
-              </div>
+              {/* Cost estimate */}
               {estimatedCost && (
-                <div style={{ color: '#666', fontSize: '11px' }}>
-                  ~{estimatedCost.inputTokens.toLocaleString()} in / ~{estimatedCost.outputTokens.toLocaleString()} out tokens
+                <div style={{ padding: 'var(--space-3)', background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)', marginBottom: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}>
+                    <span>Est. cost</span>
+                    <span style={{ color: 'var(--warning)', fontWeight: 600 }}>{formatCost(estimatedCost.usd)}</span>
+                  </div>
+                  <div style={{ color: 'var(--text-muted)', marginTop: 2 }}>
+                    ~{estimatedCost.inputTokens.toLocaleString()} in / ~{estimatedCost.outputTokens.toLocaleString()} out
+                  </div>
+                  {lastUsage && (
+                    <div style={{ marginTop: 'var(--space-2)', paddingTop: 'var(--space-2)', borderTop: '1px solid var(--border-primary)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}>
+                        <span>Last actual</span>
+                        <span style={{ color: 'var(--success)', fontWeight: 600 }}>{formatCost(lastUsage.usd)}</span>
+                      </div>
+                    </div>
+                  )}
+                  {sessionUsage.calls > 0 && (
+                    <div style={{ marginTop: 'var(--space-2)', paddingTop: 'var(--space-2)', borderTop: '1px solid var(--border-primary)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)' }}>
+                        <span>Session ({sessionUsage.calls})</span>
+                        <span style={{ color: 'var(--info)', fontWeight: 600 }}>{formatCost(costFor(sessionUsage.inputTokens, sessionUsage.outputTokens))}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-              {lastUsage && (
-                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #333' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888' }}>
-                    <span>Last actual</span>
-                    <span style={{ color: '#66bb6a', fontWeight: 'bold' }}>{formatCost(lastUsage.usd)}</span>
-                  </div>
-                  <div style={{ color: '#666', fontSize: '11px' }}>
-                    {lastUsage.inputTokens.toLocaleString()} in / {lastUsage.outputTokens.toLocaleString()} out tokens
-                  </div>
-                </div>
-              )}
-              {sessionUsage.calls > 0 && (
-                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #333' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888' }}>
-                    <span>Session ({sessionUsage.calls} {sessionUsage.calls === 1 ? 'call' : 'calls'})</span>
-                    <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>
-                      {formatCost(costFor(sessionUsage.inputTokens, sessionUsage.outputTokens))}
-                    </span>
-                  </div>
-                  <div style={{ color: '#666', fontSize: '11px' }}>
-                    {sessionUsage.inputTokens.toLocaleString()} in / {sessionUsage.outputTokens.toLocaleString()} out tokens
-                  </div>
-                </div>
-              )}
-              <div style={{ marginTop: '8px', color: '#555', fontSize: '10px' }}>
-                Sonnet 4: ${PRICING.inputPerMTok}/M in · ${PRICING.outputPerMTok}/M out
-              </div>
-            </div>
 
-            {/* Transform Button */}
-            <button
-              onClick={transformWithAPI}
-              disabled={isLoading || !inputText.trim() || !session || (!freeMode && balance != null && balance <= overageLimit)}
-              style={{
-                width: '100%',
-                marginTop: '20px',
-                padding: '15px',
-                backgroundColor: isLoading ? '#444' : (matchedProfile ? getProfileColor(matchedProfile.name) : '#3b82f6'),
-                border: 'none',
-                borderRadius: '8px',
-                color: 'white',
-                cursor: isLoading ? 'wait' : 'pointer',
-                fontSize: '16px',
-                fontWeight: 'bold'
-              }}
-            >
-              {isLoading ? 'Transforming...' : `Transform for ${matchedProfile?.name || 'Target'}`}
-            </button>
-
-            {/* Error Display */}
-            {error && (
-              <div style={{
-                marginTop: '15px',
-                padding: '10px',
-                backgroundColor: '#ff000030',
-                borderRadius: '6px',
-                border: '1px solid #ff0000',
-                fontSize: '12px',
-                color: '#ff6666'
-              }}>
-                {error}
-              </div>
-            )}
-
-            {/* Changes Log */}
-            {changes.length > 0 && (
-              <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#1a1a2e', borderRadius: '8px' }}>
-                <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
-                  Transformation Applied
-                </div>
-                {changes.map((change, i) => (
-                  <div key={i} style={{ fontSize: '11px', color: '#66bb6a', marginBottom: '4px' }}>
-                    • {change}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Input Panel */}
-          <div style={{ backgroundColor: '#252540', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column' }}>
-            <h2 style={{ fontSize: '18px', marginBottom: '15px' }}>Original Content</h2>
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Paste your content here...
-
-Example: Paste a VISIONARY profile, then click SHARP and hit Transform to see it converted for a Concrete • Past • Self reader."
-              style={{
-                flex: 1,
-                minHeight: '500px',
-                padding: '15px',
-                backgroundColor: '#1a1a2e',
-                border: '1px solid #333',
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '14px',
-                lineHeight: '1.6',
-                resize: 'none',
-                fontFamily: 'inherit'
-              }}
-            />
-          </div>
-
-          {/* Output Panel */}
-          <div style={{ backgroundColor: '#252540', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h2 style={{ fontSize: '18px', margin: 0 }}>Modified for {matchedProfile?.name || 'Target'}</h2>
-            </div>
-            <div
-              style={{
-                flex: 1,
-                minHeight: '500px',
-                padding: '15px',
-                backgroundColor: '#1a1a2e',
-                border: `1px solid ${getProfileColor(matchedProfile?.name)}40`,
-                borderRadius: '8px',
-                color: 'white',
-                fontSize: '14px',
-                lineHeight: '1.6',
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap'
-              }}
-            >
-              {isLoading ? (
-                <div style={{ color: '#888', textAlign: 'center', marginTop: '50px' }}>
-                  <div style={{ fontSize: '24px', marginBottom: '10px' }}>⏳</div>
-                  Transforming content for {matchedProfile?.name}...
-                </div>
-              ) : (
-                modifiedText || 'Transformed content will appear here after you click Transform...'
-              )}
-            </div>
-            <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
+              {/* Translate button */}
               <button
-                onClick={() => navigator.clipboard.writeText(modifiedText)}
-                disabled={!modifiedText}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: modifiedText ? getProfileColor(matchedProfile?.name) : '#333',
-                  border: 'none',
-                  borderRadius: '6px',
-                  color: 'white',
-                  cursor: modifiedText ? 'pointer' : 'not-allowed',
-                  fontSize: '14px'
-                }}
+                onClick={translateWithProfile}
+                disabled={isTranslating || !readerContent.trim() || !session || (!freeMode && balance != null && balance <= overageLimit)}
+                className="btn btn-primary btn-lg"
+                style={{ width: '100%', background: isTranslating ? 'var(--bg-surface)' : `linear-gradient(135deg, ${getProfileColor(matchedProfile?.name)}, ${getProfileColor(matchedProfile?.name)}cc)` }}
+                id="translate-btn"
               >
-                Copy Modified Text
+                {isTranslating ? (
+                  <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Translating…</>
+                ) : (
+                  `Translate for ${matchedProfile?.name || 'Target'}`
+                )}
               </button>
+
+              {translationError && (
+                <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', background: 'rgba(248,113,113,0.1)', border: '1px solid var(--error)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-xs)', color: 'var(--error)' }}>
+                  {translationError}
+                </div>
+              )}
+
+              {changes.length > 0 && (
+                <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--bg-primary)', borderRadius: 'var(--radius-sm)' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-2)' }}>Translation Applied</div>
+                  {changes.map((c, i) => (
+                    <div key={i} style={{ fontSize: 'var(--text-xs)', color: 'var(--success)', marginBottom: 2 }}>• {c}</div>
+                  ))}
+                </div>
+              )}
+
+              {/* All 27 profiles grid */}
+              <div style={{ marginTop: 'var(--space-5)' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>All 27 Profiles</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-1)' }}>
+                  {Object.entries(PROFILES).map(([name, config]) => {
+                    const isActive = matchedProfile?.name === name;
+                    return (
+                      <button key={name} onClick={() => {
+                        setSpatial(Math.round((config.spatial[0] + config.spatial[1]) / 2));
+                        setTemporal(Math.round((config.temporal[0] + config.temporal[1]) / 2));
+                        setReference(Math.round((config.reference[0] + config.reference[1]) / 2));
+                      }} style={{
+                        padding: '4px 2px', fontSize: '9px', border: isActive ? `2px solid ${getProfileColor(name)}` : '1px solid var(--border-primary)',
+                        borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: isActive ? `${getProfileColor(name)}25` : 'var(--bg-surface)',
+                        color: isActive ? getProfileColor(name) : 'var(--text-tertiary)', fontWeight: isActive ? 700 : 400, transition: 'all var(--transition-fast)',
+                        fontFamily: 'var(--font-ui)',
+                      }}>
+                        {name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Copy translated */}
+            {translatedContent && (
+              <div className="translation-actions">
+                <button className="btn btn-secondary btn-sm" onClick={() => navigator.clipboard.writeText(translatedContent).then(() => showToast('Copied!', 'success'))}>
+                  📋 Copy Translation
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Settings Modal ─────────────────────────────── */}
+      {showSettings && (
+        <div className="settings-overlay" onClick={e => { if (e.target === e.currentTarget) setShowSettings(false); }}>
+          <div className="settings-modal">
+            <div className="settings-header">
+              <div className="settings-title">Settings</div>
+              <button className="icon-btn" onClick={() => setShowSettings(false)}>✕</button>
+            </div>
+            <div className="settings-body">
+              <div className="settings-section">
+                <div className="settings-section-title">Appearance</div>
+                <div className="settings-row">
+                  <div><div className="settings-label">Theme</div><div className="settings-hint">Choose your reading ambiance</div></div>
+                  <div className="theme-picker">
+                    {THEMES.map(t => <button key={t.key} className={`theme-btn ${t.key} ${settings.theme === t.key ? 'active' : ''}`} onClick={() => updateSetting('theme', t.key)} title={t.label} />)}
+                  </div>
+                </div>
+              </div>
+              <div className="settings-section">
+                <div className="settings-section-title">Typography</div>
+                <div className="settings-row">
+                  <div className="settings-label">Font</div>
+                  <div className="font-selector">
+                    {FONT_OPTIONS.map(f => <button key={f.key} className={`font-btn ${settings.fontFamily === f.key ? 'active' : ''}`} onClick={() => updateSetting('fontFamily', f.key)} style={{ fontFamily: f.family }}>{f.label}</button>)}
+                  </div>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-label">Font Size</div>
+                  <div className="settings-slider"><input type="range" min="12" max="32" value={settings.fontSize} onChange={e => updateSetting('fontSize', parseInt(e.target.value))} /><span className="settings-slider-value">{settings.fontSize}px</span></div>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-label">Line Height</div>
+                  <div className="settings-slider"><input type="range" min="1.2" max="2.4" step="0.1" value={settings.lineHeight} onChange={e => updateSetting('lineHeight', parseFloat(e.target.value))} /><span className="settings-slider-value">{settings.lineHeight}</span></div>
+                </div>
+                <div className="settings-row">
+                  <div className="settings-label">Reader Width</div>
+                  <div className="settings-slider"><input type="range" min="500" max="1000" step="20" value={settings.readerWidth} onChange={e => updateSetting('readerWidth', parseInt(e.target.value))} /><span className="settings-slider-value">{settings.readerWidth}px</span></div>
+                </div>
+              </div>
+              <div className="settings-section">
+                <div className="settings-section-title">Preview</div>
+                <div style={{ padding: 'var(--space-5)', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-primary)' }}>
+                  <p style={{ fontFamily: currentFont.family, fontSize: settings.fontSize, lineHeight: settings.lineHeight, color: 'var(--text-reading)', margin: 0 }}>
+                    The quick brown fox jumps over the lazy dog. This is how your reading experience will look.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Profile Grid */}
-        <div style={{ marginTop: '30px', backgroundColor: '#252540', borderRadius: '12px', padding: '20px' }}>
-          <h2 style={{ fontSize: '18px', marginBottom: '15px' }}>All 27 Profiles</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: '8px' }}>
-            {Object.entries(PROFILES).map(([name, config]) => {
-              const isActive = matchedProfile?.name === name;
-              return (
-                <button
-                  key={name}
-                  onClick={() => {
-                    setSpatial(Math.round((config.spatial[0] + config.spatial[1]) / 2));
-                    setTemporal(Math.round((config.temporal[0] + config.temporal[1]) / 2));
-                    setReference(Math.round((config.reference[0] + config.reference[1]) / 2));
-                  }}
-                  style={{
-                    padding: '8px 4px',
-                    fontSize: '10px',
-                    border: isActive ? '2px solid white' : 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    backgroundColor: isActive ? getProfileColor(name) : `${getProfileColor(name)}40`,
-                    color: 'white',
-                    opacity: isActive ? 1 : 0.7
-                  }}
-                >
-                  {name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      {/* Toast */}
+      {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
     </div>
   );
 }
 
-export default CognitiveModifier;
+export default MyReader;

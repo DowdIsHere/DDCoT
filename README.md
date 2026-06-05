@@ -1,70 +1,94 @@
-# Getting Started with Create React App
+# MyReader — Premium Translation E-Reader
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A high-end, AI-powered translation e-reader built with React and Claude. Upload books, read in any language, and translate on-the-fly with a beautiful, distraction-free interface.
 
-## Available Scripts
+Inspired by [ZEReader](https://github.com/Allegra42/ZEReader)'s modular architecture and modern e-reader best practices.
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+- **📖 Reading Engine** — Premium typography with Literata, Merriweather, or Inter fonts. Adjustable font size, line height, and reader width.
+- **🌐 AI Translation** — Powered by Claude. Select text, paragraphs, or translate entire documents between 20+ languages.
+- **📑 Bilingual View** — Side-by-side original and translated text for language learning.
+- **📝 Vocabulary Tracker** — Save words and phrases with translations and context.
+- **📚 Library** — Upload TXT, MD, or EPUB files. Paste text directly. All stored locally.
+- **🎨 Themes** — Dark, Light, and Sepia modes with smooth transitions.
+- **⚡ Credits** — Stripe-powered credit system for translation API usage.
+- **🔐 Auth** — Supabase authentication with email/password.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Tech Stack
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- **Frontend**: React 19 (Create React App)
+- **Backend**: Express.js
+- **AI**: Anthropic Claude Sonnet 4
+- **Auth**: Supabase
+- **Payments**: Stripe
+- **EPUB Parsing**: epub.js
 
-### `npm test`
+## Quick Start
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Prerequisites
+- Node.js >= 20
+- Anthropic API key
+- Supabase project (for auth + credits)
+- Stripe account (for payments, optional in FREE_MODE)
 
-### `npm run build`
+### Setup
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+# Install dependencies
+npm install
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+# Copy environment variables
+cp .env.example .env
+# Edit .env with your API keys
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+# Start dev server
+npm start
+```
 
-### `npm run eject`
+### Environment Variables
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```
+ANTHROPIC_API_KEY=        # Required — Claude API key
+SUPABASE_URL=             # Required — Supabase project URL
+SUPABASE_ANON_KEY=        # Required — Supabase anon/public key
+SUPABASE_SERVICE_ROLE_KEY=# Required — Supabase service role key
+STRIPE_SECRET_KEY=        # Optional — Stripe secret key
+STRIPE_WEBHOOK_SECRET=    # Optional — Stripe webhook signing secret
+FREE_MODE=true            # Set to 'true' to bypass credits (dev/testing)
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Production Build
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+npm run build
+node server.js
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Architecture
 
-## Learn More
+```
+MyReader
+├── public/               # Static assets, index.html
+├── src/
+│   ├── index.js          # Entry point
+│   ├── index.css         # Design system (tokens, themes, animations)
+│   ├── App.js            # Main MyReader component
+│   ├── App.css           # Component styles
+│   └── supabaseClient.js # Supabase connection
+├── server.js             # Express API (translate, auth, credits, checkout)
+└── package.json
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Design Philosophy
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Inspired by ZEReader's approach:
+1. **Modular** — Components are isolated and swappable
+2. **Calm** — Content-first, controls hidden until needed
+3. **Efficient** — Lightweight frontend, no bloat
+4. **Customizable** — Every aspect of the reading experience is configurable
+5. **Open** — Multiple file format support (TXT, EPUB)
 
-### Code Splitting
+## License
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Private project.
